@@ -43,7 +43,7 @@ crew = Crew(
 )
 
 # Example usage: Kick off the crew with a sample input
-result = crew.kickoff(inputs={"patient_query": "I have a headache and feel dizzy. What should I do?"})
+result = crew.kickoff(inputs={"patient_query": "I have a lot of scars and damage on my face. What should I do? What kind of doctor should I see?"})
 
 print(result)
 

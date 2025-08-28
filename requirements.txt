@@ -1,3 +1,10 @@
 crewai
 crewai-tools
+langchain-openai
+langchain-community
+pypdf
+python-dotenv
+
+
+
 
