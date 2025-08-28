@@ -87,7 +87,7 @@ crew = Crew(
 
 
 if __name__ == "__main__":
-    report_file_path = "D:\Hospital-AI-Support\medi.pdf" 
+    report_file_path = "D:\Hospital-AI-Support\Ca.pdf" 
     pdf_text = read_pdf(report_file_path)
     
     if "Error" in pdf_text:
