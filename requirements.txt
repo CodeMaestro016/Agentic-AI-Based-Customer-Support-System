@@ -19,3 +19,4 @@ httpx
 passlib[bcrypt]
 pyjwt
 cryptography
+PyPDF2
