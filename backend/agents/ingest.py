@@ -39,16 +39,29 @@ def ingest(pdf_path=PDF_PATH, persist_dir=PERSIST_DIR, force_reindex=False, chun
     loader = PyPDFLoader(pdf_path)
     docs = loader.load()
 
-    print(f"Splitting into chunks (size={chunk_size}, overlap={chunk_overlap})...")
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+      # ingest.py (only the splitter part + force reindex for this run)
+
+    print(f"Splitting into chunks ...")
+    splitter = RecursiveCharacterTextSplitter(
+    # keep lists together as much as possible
+        chunk_size=1200,
+        chunk_overlap=200,
+        separators=["\n\n", "\n", " "],   # be gentle splitting lists
+        add_start_index=True
+    )
     chunks = splitter.split_documents(docs)
 
     print(f"Creating embeddings for {len(chunks)} chunks...")
-    embeddings = OpenAIEmbeddings()   # requires OPENAI_API_KEY. Replace if you prefer a local model.
+    embeddings = OpenAIEmbeddings()
 
     print(f"Persisting to Chroma @ {persist_dir} ...")
-    vectordb = Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory=persist_dir)
+    vectordb = Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=persist_dir
+    )
     vectordb.persist()
+
 
     manifest = {"sha256": file_hash, "num_chunks": len(chunks), "source": os.path.basename(pdf_path)}
     with open(MANIFEST, "w") as mf:
