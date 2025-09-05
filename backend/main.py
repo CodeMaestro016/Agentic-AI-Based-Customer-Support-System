@@ -41,7 +41,20 @@ async def health_check():
     return {
         "status": "healthy",
         "message": "Customer Support System Backend is running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "database": "MongoDB connection will be tested during startup"
+    }
+
+# API status endpoint
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "name": "Customer Support System API",
+        "status": "running",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/health"
     }
 
 # Startup event
@@ -52,8 +65,9 @@ async def startup_event():
         await connect_to_mongo()
         logger.info("Application startup completed successfully")
     except Exception as e:
-        logger.error(f"Failed to start application: {e}")
-        raise
+        logger.warning(f"Failed to connect to MongoDB: {e}")
+        logger.warning("⚠️ Application starting without database connection - some features may not work")
+        logger.info("💡 To fix this: Install MongoDB locally or set up MongoDB Atlas")
 
 # Shutdown event
 @app.on_event("shutdown")
