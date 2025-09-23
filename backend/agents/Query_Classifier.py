@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_openai import ChatOpenAI
 
-
-
 # 1. Setup
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
