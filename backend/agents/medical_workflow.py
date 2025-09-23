@@ -1,3 +1,6 @@
+# Medical Workflow Orchestrator - Manages complete conversation flow
+# Coordinates Query_Classifier → RAG → Solution_Agent for natural chat
+
 import os
 import json
 from dotenv import load_dotenv
@@ -7,10 +10,12 @@ from followup_agent import FollowUpAgent
 from rag_agent import answer_query
 from Doc_Summerize import read_pdf, crew as doc_crew
 
+# Setup environment
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 class MedicalWorkflow:
+    """Orchestrates medical conversation workflow like real chat"""
     def __init__(self):
         self.query_classifier = QueryClassifierAgent()
         self.solution_agent = SolutionAgent()
@@ -18,22 +23,29 @@ class MedicalWorkflow:
         self.chat_history = []
     
     def process_query(self, user_input):
+        """Process user query through complete conversational workflow"""
         
         print(f"\n=== Processing: {user_input} ===")
         
+        # Handle document summarization requests
         if user_input.startswith("doc:"):
             return self._handle_document_query(user_input)
         
+        # Update chat history BEFORE processing to provide context
         self.chat_history.append({"role": "user", "content": user_input})
         
+        # Step 1: Query Classification (JSON only)
         print("Step 1: Query Classification...")
         classification = self.query_classifier.classify_query(user_input, self.chat_history)
         print(f"Classification: {json.dumps(classification, indent=2)}")
         
+        # Check if RAG (knowledge base search) is needed
         rag_context = None
         if classification.get("required_resources", {}).get("rag_needed", False):
             print("\nStep 2a: Retrieving knowledge base information...")
             try:
+                # Only enhance RAG query if user explicitly asks for specific information
+                rag_query = user_input
                 explicitly_asking_for_info = any(word in user_input.lower() for word in [
                     'address', 'location', 'contact', 'phone', 'number', 'where',
                     'doctor', 'specialist', 'appointment', 'schedule', 'book', 'available'
@@ -49,10 +61,12 @@ class MedicalWorkflow:
                 rag_context = rag_result["answer"]
                 print(f"RAG Context: {rag_context}")
                 
+                # Check if RAG found relevant info and user explicitly asked for it
                 if not rag_context or rag_context.lower().strip() in [
                     "i don't know", "i'm not sure", "no information available",
                     "i cannot find", "i don't have information"
                 ] or "don't know" in rag_context.lower():
+                    # Only provide fallback information if user explicitly asked for it
                     if explicitly_asking_for_info:
                         if any(word in user_input.lower() for word in ['address', 'location', 'contact', 'phone', 'where']):
                             rag_context = "MediConnect Medical Center is located at 123 Medical Plaza, Colombo 07. Contact: +94 11 234 5678. Reception hours: 8 AM - 8 PM daily."
@@ -69,8 +83,10 @@ class MedicalWorkflow:
                 print(f"Knowledge base error: {e}")
                 rag_context = "Knowledge base system unavailable"
         
+        # Generate single conversational response
         print("\nStep 4: Generating Unified Response...")
         
+        # Create context for natural response generation
         response_context = {
             "classification": classification,
             "patient_query": user_input,
@@ -82,6 +98,7 @@ class MedicalWorkflow:
         unified_response = self.solution_agent.generate_unified_response(**response_context)
         print(f"Unified Response: {unified_response}")
         
+        # Update chat history
         self.chat_history.append({"role": "assistant", "content": unified_response})
         
         return {
@@ -91,19 +108,24 @@ class MedicalWorkflow:
         }
     
     def _handle_document_query(self, user_input):
+        """Handle document summarization workflow"""
         doc_text = user_input.replace("doc:", "").strip()
         
         print("Step 1: Document Summarization...")
         
+        # Check if it's PDF file or direct text
         if doc_text.endswith('.pdf'):
+            # Handle PDF file path
             pdf_content = read_pdf(doc_text)
             if "Error" in pdf_content:
                 print(f"PDF Error: {pdf_content}")
                 return {"error": pdf_content}
             doc_input = pdf_content
         else:
+            # Handle direct text input
             doc_input = doc_text
         
+        # Use document summarization agent
         try:
             doc_result = doc_crew.kickoff(inputs={"pdf_text": doc_input})
             task_result = doc_result.tasks_output[0]
@@ -113,6 +135,7 @@ class MedicalWorkflow:
             print(f"Doc Summarization Error: {e}")
             doc_summary = f"Document summarization failed: {e}"
         
+        # Step 2: Generate Solution based on document summary
         print("\nStep 2: Generating Solution from Document...")
         classification = {
             "intent": "document_request",
@@ -128,6 +151,7 @@ class MedicalWorkflow:
         )
         print(f"Solution: {solution}")
         
+        # Step 3: Follow-up Questions
         print("\nStep 3: Generating Follow-up...")
         followup = self.followup_agent.generate_followup(
             solution=solution,
@@ -137,6 +161,7 @@ class MedicalWorkflow:
         )
         print(f"Follow-up: {followup}")
         
+        # Update chat history
         self.chat_history.append({"role": "user", "content": user_input})
         self.chat_history.append({"role": "assistant", "content": f"{solution}\n\n{followup}"})
         
@@ -149,9 +174,11 @@ class MedicalWorkflow:
         }
     
     def _determine_conversation_stage(self):
+        """Determine what stage of conversation we're in"""
         if not self.chat_history:
             return "initial"
         
+        # Count user messages to determine stage
         user_messages = [msg for msg in self.chat_history if msg["role"] == "user"]
         
         if len(user_messages) == 1:
@@ -164,11 +191,13 @@ class MedicalWorkflow:
             return "ongoing_conversation"
     
     def save_and_exit(self):
+        """Save chat history and exit"""
         with open("chat_history.json", "w", encoding="utf-8") as f:
             json.dump(self.chat_history, f, indent=2)
         print("👋 Goodbye! Stay safe.")
 
 def main():
+    """Main interactive loop - Complete Workflow with RAG and Doc Support"""
     workflow = MedicalWorkflow()
     
     print("Medical AI Workflow System")
