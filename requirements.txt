@@ -7,7 +7,7 @@ python-dotenv
 spacy
 sumy
 fastapi
-uvicorn
+uvicorn[standard]
 streamlit
 pymongo
 sentence-transformers
@@ -15,8 +15,12 @@ chromadb
 faiss-cpu
 openai
 pydantic
+pydantic-settings
 httpx
+requests
 passlib[bcrypt]
 pyjwt
 cryptography
 PyPDF2
+motor
+email-validator

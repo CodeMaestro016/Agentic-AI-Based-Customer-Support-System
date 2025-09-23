@@ -12,7 +12,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings      # or replace with HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 
-PDF_PATH = "data/MediConnect_Channeling_Center_KB[1].pdf"
+PDF_PATH = "../../data/MediConnect_Channeling_Center_KB[1].pdf"
 PERSIST_DIR = "chroma_mediconnect"
 MANIFEST = os.path.join(PERSIST_DIR, "manifest.json")
 
