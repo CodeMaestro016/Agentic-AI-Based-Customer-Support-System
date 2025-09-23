@@ -1,16 +1,22 @@
+# Follow-up Agent - Handles conversation continuity and natural follow-up questions
+# Provides context-aware questions without repetition
+
 import os
 import json
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_openai import ChatOpenAI
 
+# Setup environment
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
 
 class FollowUpAgent:
+    """Manages conversation continuity and follow-up questions"""
     def __init__(self):
+        # Follow-up agent for medical conversation continuity
         self.agent = Agent(
             role="Medical Follow-up Specialist",
             goal=(
@@ -29,6 +35,7 @@ class FollowUpAgent:
             allow_delegation=False,
         )
         
+        # Task for context-aware follow-up questions
         self.task = Task(
             description=(
                 "Based on the solution provided: {solution}\n"
@@ -56,6 +63,7 @@ class FollowUpAgent:
             agent=self.agent
         )
         
+        # Crew setup for follow-up agent
         self.crew = Crew(
             agents=[self.agent],
             tasks=[self.task],
@@ -63,6 +71,7 @@ class FollowUpAgent:
         )
     
     def generate_followup(self, solution, original_query, classification, chat_history=None):
+        """Generate follow-up questions after solution"""
         if chat_history is None:
             chat_history = []
             
@@ -73,16 +82,19 @@ class FollowUpAgent:
             "chat_history": chat_history
         })
         
+        # Extract the agent's response
         task_result = result.tasks_output[0]
         response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
         
         return response
     
     def save_chat_history(self, chat_history):
+        """Save chat history to file"""
         with open("chat_history.json", "w", encoding="utf-8") as f:
             json.dump(chat_history, f, indent=2)
 
 if __name__ == "__main__":
+    # Test the Follow-up Agent
     followup_agent = FollowUpAgent()
     
     test_history = [
