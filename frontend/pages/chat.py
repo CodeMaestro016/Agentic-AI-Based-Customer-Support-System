@@ -1,8 +1,20 @@
+# Chat interface for authenticated users
+
 import streamlit as st
-from layout import render_header, render_footer
+import sys
+import os
+
+# Add frontend directory to path
+frontend_dir = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, frontend_dir)
+
+from api_utils import clear_auth_session
+from layout import render_header, render_footer, render_modern_header_with_user
 
 def chat_ui():
-    render_header()
+    """Chat interface for authenticated users"""
+    # Render modern header with integrated user info and logout
+    render_modern_header_with_user()
 
     st.write("Welcome to **MediConnect**! How can we assist you today?")
 
@@ -24,4 +36,8 @@ def chat_ui():
         st.session_state["messages"].append({"role": "bot", "content": "🤖 Bot response placeholder"})
         st.rerun()
 
+    # Render footer
     render_footer()
+
+if __name__ == "__main__":
+    chat_ui()
