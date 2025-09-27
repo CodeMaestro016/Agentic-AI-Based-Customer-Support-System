@@ -9,21 +9,21 @@ from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 
-# -------------------------------------------------------------------
-# 1. Load environment variables (like your OpenAI API key)
-# -------------------------------------------------------------------
+ 
+# 1. Load environment variables and set API key
+ 
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
-# -------------------------------------------------------------------
+ 
 # 2. Paths and retrieval settings
-# -------------------------------------------------------------------
+ 
 PERSIST_DIR = "chroma_mediconnect"   # where your Chroma DB is stored
 K = 10                               # number of chunks to retrieve
 
-# -------------------------------------------------------------------
+ 
 # 3. Load embeddings and connect to Chroma vector database
-# -------------------------------------------------------------------
+ 
 print("Loading embeddings & vectorstore...")
 embeddings = OpenAIEmbeddings()
 vectordb = Chroma(persist_directory=PERSIST_DIR, embedding_function=embeddings)
@@ -38,14 +38,13 @@ retriever = vectordb.as_retriever(
     }
 )
 
-# -------------------------------------------------------------------
+ 
 # 4. Initialize LLM (GPT model)
-# -------------------------------------------------------------------
+ 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.2)
-
-# -------------------------------------------------------------------
+ 
 # 5. Custom prompts: force the model to return ALL doctors
-# -------------------------------------------------------------------
+ 
 QUESTION_PROMPT = PromptTemplate.from_template(
 """You are given context from the MediConnect knowledge base.
 
@@ -114,9 +113,9 @@ Final clean answer:"""
 )
 
 
-# -------------------------------------------------------------------
+
 # 6. Create RetrievalQA chain (map_reduce ensures all chunks are merged)
-# -------------------------------------------------------------------
+ 
 def get_qa_chain(user_query: str):
     """Return the appropriate RetrievalQA chain based on query type."""
     if "doctor" in user_query.lower() or "specialist" in user_query.lower():
@@ -134,11 +133,9 @@ def get_qa_chain(user_query: str):
             "combine_prompt": COMBINE_PROMPT
         },
     )
-
-
-# -------------------------------------------------------------------
+ 
 # 7. Define the Agent (optional, for persona/memory)
-# -------------------------------------------------------------------
+ 
 query_handler_agent = Agent(
     role="MediConnect RAG Agent",
     goal="Answer user questions about MediConnect KB clearly and completely.",
@@ -149,10 +146,9 @@ query_handler_agent = Agent(
     allow_delegation=False,
     tools=[]
 )
-
-# -------------------------------------------------------------------
+ 
 # 8. Helper function to query the knowledge base
-# -------------------------------------------------------------------
+ 
 def answer_query(user_query: str):
     qa_chain = get_qa_chain(user_query)   # choose prompt based on questionwhat are the services do you have?
     result = qa_chain({"query": user_query})
@@ -160,9 +156,9 @@ def answer_query(user_query: str):
 
 
 
-# -------------------------------------------------------------------
+ 
 # 9. Interactive loop (simple CLI chatbot)
-# -------------------------------------------------------------------
+ 
 if __name__ == "__main__":
     print("MediConnect RAG Agent ready. Type a question (or 'quit'):")
     while True:
