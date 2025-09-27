@@ -342,9 +342,9 @@ def render_hero_section_interactive():
         <div class="hero-main">
             <div class="hero-content">
                 <h1 class="hero-title">
-                    Smarter<br>
-                    Healthcare <span class="highlight">Connections<br>
-                    for Everyone</span>
+                    Smarter <br>
+                    Healthcare <span class="highlight">Connections</span><br>
+                    for Everyone
                 </h1>
                 <p class="hero-subtitle">
                     MediConnect brings people together through secure and<br>
