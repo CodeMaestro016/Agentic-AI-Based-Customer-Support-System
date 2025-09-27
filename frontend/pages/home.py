@@ -342,14 +342,14 @@ def render_hero_section_interactive():
         <div class="hero-main">
             <div class="hero-content">
                 <h1 class="hero-title">
-                    Chatbots<br>
-                    for your <span class="highlight">mobile<br>
-                    applications</span>
+                    Smarter <br>
+                    Healthcare <span class="highlight">Connections</span><br>
+                    for Everyone
                 </h1>
                 <p class="hero-subtitle">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit,<br>
-                    sed do eiusmod tempor incididunt ut labore et dolore<br>
-                    magna aliqua
+                    MediConnect brings people together through secure and<br>
+                    reliable health communication—whether for consultations,<br>
+                    follow-ups, or sharing medical updates.
                 </p>
                 <div class="hero-buttons" style="margin-top: 40px; display: flex; gap: 15px;">
                     <form method="GET" style="display: inline;">
