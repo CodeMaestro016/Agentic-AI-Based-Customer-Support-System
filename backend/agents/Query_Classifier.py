@@ -4,134 +4,135 @@ from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_openai import ChatOpenAI
 
-# 1. Setup
+# Setup
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-
-# Chat history (kept in memory, can also save to file)
-chat_history = []
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Lower temperature for consistent classification
 
 
 
-# 2. Query Classifier Agent + Crew
-query_classifier_agent = Agent(
-    role="Query Classifier Agent",
-    goal=(
-        "Handle patient queries about symptoms responsibly by first asking clarifying questions "
-        "if the symptom is vague (e.g., pain, fever, fatigue, cough). "
-        "Examples of clarifying details: duration, severity, specific location, triggers, other symptoms. "
-        "Once enough info is gathered, provide a brief summary of the symptom, safe next steps, "
-        "and emphasize consulting a doctor."
-    ),
-    backstory=(
-        "You are an empathetic AI assistant helping patients understand symptoms. "
-        "Your first step is to gather important missing details before suggesting safe general advice. "
-        "You never give a diagnosis. Instead, you guide the user to professional care while showing support."
-    ),
-    llm=llm,
-    verbose=True,
-    memory=True,
-    allow_delegation=False,
-)
+class QueryClassifierAgent:
+    """Classifies user queries and determines required resources"""
+    def __init__(self):
+        # Query classification agent - returns structured JSON
+        self.agent = Agent(
+            role="Medical Query Classification Specialist",
+            goal=(
+                "Classify medical queries and determine the appropriate workflow path. "
+                "Analyze user intent, urgency level, and required resources to handle the query effectively."
+            ),
+            backstory=(
+                "You are an AI specialist that analyzes medical queries to determine the best "
+                "processing workflow. You classify queries by intent, urgency, and resource needs "
+                "to ensure patients receive appropriate assistance."
+            ),
+            llm=llm,
+            verbose=True,
+            memory=True,
+            allow_delegation=False,
+        )
 
-query_task = Task(
-    description=(
-        "Conversation so far: {chat_history}\n\n"
-        "The latest patient query is: {patient_query}. "
-        "If the symptom is broad or unclear (like 'back pain', 'fever', 'tiredness'), "
-        "ask 1–2 clarifying questions such as: duration, severity, exact location, or other symptoms. "
-        "If enough detail is provided, then summarize the situation briefly, suggest safe actions (like rest, hydration, OTC relief), "
-        "and always include a disclaimer that this is not medical advice and a doctor should be consulted."
-    ),
-    expected_output=(
-        "Either (a) one or two clarifying questions, OR (b) a concise response including symptom details, "
-        "safe recommended actions, and a disclaimer."
-    ),
-    agent=query_classifier_agent
-)
+        # Classification task - returns structured JSON
+        self.task = Task(
+            description=(
+                "Analyze the patient query: {patient_query}\n"
+                "Chat history context: {chat_history}\n\n"
+                "Classify this query and return a JSON object with the following structure:\n"
+                "{\n"
+                "  \"intent\": \"symptom_inquiry\" | \"appointment_request\" | \"doctor_inquiry\" | \"center_information\" | \"document_request\" | \"emergency\" | \"greeting\" | \"invalid_query\",\n"
+                "  \"urgency\": \"low\" | \"medium\" | \"high\" | \"emergency\",\n"
+                "  \"symptoms\": [\"list of mentioned symptoms\"],\n"
+                "  \"required_resources\": {\n"
+                "    \"rag_needed\": true/false,\n"
+                "    \"summarization_needed\": true/false,\n"
+                "    \"direct_llm\": true/false\n"
+                "  },\n"
+                "  \"risk_level\": \"low\" | \"medium\" | \"high\" | \"emergency\",\n"
+                "  \"next_agent\": \"rag_agent\" | \"solution_agent\" | \"doc_summarizer\",\n"
+                "  \"reasoning\": \"Brief explanation of classification\"\n"
+                "}\n\n"
+                "Classification Rules:\n"
+                "- symptom_inquiry: Patient describes symptoms or health concerns\n"
+                "- appointment_request: Patient wants to book/schedule appointment\n"
+                "- doctor_inquiry: Patient asks about available doctors or specialists (including psychologists, psychiatrists, mental health specialists)\n"
+                "- center_information: Patient asks for address, contact, hours\n"
+                "- document_request: Patient uploads/mentions medical documents\n"
+                "- emergency: Life-threatening symptoms (chest pain, difficulty breathing, severe bleeding)\n"
+                "- greeting: Polite greetings like 'hi', 'hello', 'good morning', 'how are you'\n"
+                "- invalid_query: Meaningless text, random characters, gibberish (like 'hjhsds', 'xyzabc'), or completely unrelated content\n\n"
+                "RAG needed for: doctor inquiries, appointment requests, center information\n"
+                "Direct LLM for: symptom inquiries, general health questions, greetings\n"
+                "Summarization needed for: document uploads, PDF processing\n\n"
+                "IMPORTANT: Distinguish between greetings (friendly words) and gibberish (random letters)\n"
+                "Greeting examples: 'hi', 'hello', 'good morning', 'how are you', 'hey there'\n"
+                "Invalid examples: 'hjhsds', 'aaaa', 'xyzabc', 'qwerty', random letter combinations\n"
+                "Doctor inquiry keywords: doctor, specialist, psychologist, psychiatrist, therapist, counselor, mental health, psychology, psychiatry\n"
+                "Emergency indicators: chest pain, can't breathe, severe bleeding, unconsciousness, stroke symptoms"
+            ),
+            expected_output=(
+                "Valid JSON object with intent, urgency, symptoms, required_resources, risk_level, next_agent, and reasoning fields."
+            ),
+            agent=self.agent
+        )
 
-query_crew = Crew(
-    agents=[query_classifier_agent],
-    tasks=[query_task],
-    verbose=True,
-)
-
-
-
-# 3. Medical Summarizer Agent + Crew
-medical_summarizer_agent = Agent(
-    role="Medical Document Summarizer Agent",
-    goal=(
-        "Summarize medical research papers, instructions, or clinical documents into clear, "
-        "accessible summaries while emphasizing that this is not a substitute for professional medical advice."
-    ),
-    backstory=(
-        "You are an AI specialized in medical document summarization. "
-        "You help users quickly grasp key points, risks, and next steps from long documents. "
-        "You avoid making clinical decisions and always include a disclaimer."
-    ),
-    llm=llm,
-    verbose=True,
-    memory=True,
-    allow_delegation=False,
-)
-
-summarizer_task = Task(
-    description=(
-        "Conversation so far: {chat_history}\n\n"
-        "The document content is: {document_text}. "
-        "Summarize it into key points that are clear and easy to understand. "
-        "Highlight important warnings, safe practices, and always include a disclaimer."
-    ),
-    expected_output=(
-        "A concise summary of the document with key points, important risks, and a disclaimer."
-    ),
-    agent=medical_summarizer_agent
-)
-
-summarizer_crew = Crew(
-    agents=[medical_summarizer_agent],
-    tasks=[summarizer_task],
-    verbose=True,
-)
-
-
-
-# 4. Interactive Terminal Loop
-print("Welcome to the Medical Assistant Crew (AI).")
-print("👉 Ask a health-related question normally.")
-print("👉 To summarize a document, prefix with 'doc:'")
-print("👉 Type 'exit' to quit.\n")
-
-while True:
-    user_input = input("User: ")
-    if user_input.lower() == "exit":
-        print("👋 Goodbye! Stay safe.")
-        # Save chat history to file for persistence
-        with open("chat_history.json", "w", encoding="utf-8") as f:
-            json.dump(chat_history, f, indent=2)
-        break
-
-    if user_input.startswith("doc:"):
-        doc_text = user_input.replace("doc:", "").strip()
-        result = summarizer_crew.kickoff(inputs={
-            "document_text": doc_text,
+        # Crew setup
+        self.crew = Crew(
+            agents=[self.agent],
+            tasks=[self.task],
+            verbose=True,
+        )
+    
+    def classify_query(self, patient_query, chat_history=None):
+        """Classify a patient query and return structured JSON"""
+        if chat_history is None:
+            chat_history = []
+            
+        result = self.crew.kickoff(inputs={
+            "patient_query": patient_query,
             "chat_history": chat_history
         })
-    else:
-        result = query_crew.kickoff(inputs={
-            "patient_query": user_input,
-            "chat_history": chat_history
-        })
+        
+        # Extract the agent's response
+        task_result = result.tasks_output[0]
+        response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
+        
+        # Parse JSON response
+        try:
+            classification = json.loads(response.strip())
+            return classification
+        except json.JSONDecodeError:
+            # Fallback classification if JSON parsing fails
+            print(f"Warning: Failed to parse classification JSON: {response}")
+            return {
+                "intent": "symptom_inquiry",
+                "urgency": "medium",
+                "symptoms": [],
+                "required_resources": {
+                    "rag_needed": False,
+                    "summarization_needed": False,
+                    "direct_llm": True
+                },
+                "risk_level": "medium",
+                "next_agent": "solution_agent",
+                "reasoning": "Fallback classification due to parsing error"
+            }
 
-    # Extract the agent’s response
-    task_result = result.tasks_output[0]
-    response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
-
-    # Update chat history
-    chat_history.append({"role": "user", "content": user_input})
-    chat_history.append({"role": "agent", "content": response})
-
-    print("Agent:", response)
+if __name__ == "__main__":
+    # Test the Query Classifier
+    classifier = QueryClassifierAgent()
+    
+    print("Query Classifier Agent Test")
+    print("👉 Enter medical queries to test classification")
+    print("👉 Type 'exit' to quit.\n")
+    
+    while True:
+        user_input = input("User: ")
+        if user_input.lower() == "exit":
+            print("👋 Goodbye!")
+            break
+        
+        classification = classifier.classify_query(user_input)
+        print("Classification:")
+        print(json.dumps(classification, indent=2))
+        print()
