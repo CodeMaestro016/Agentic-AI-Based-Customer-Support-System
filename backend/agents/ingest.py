@@ -23,7 +23,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings      # or replace with HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 
-PDF_PATH = "../../data/MediConnect_Channeling_Center_KB[1].pdf"  # Path to your PDF knowledge base
+PDF_PATH = "C:\Agentic-AI-Based-Customer-Support-System\data\MediConnect_Channeling_Center_KB[1].pdf"  # Path to your PDF knowledge base
 PERSIST_DIR = "chroma_mediconnect"                              # Folder where vectorstore will be saved
 MANIFEST = os.path.join(PERSIST_DIR, "manifest.json")           # File storing metadata (PDF hash, num chunks, etc.)
 
