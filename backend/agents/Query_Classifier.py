@@ -4,204 +4,175 @@ from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_openai import ChatOpenAI
 
-# 1. Setup
+# Setup
 load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
-
-# Chat history (kept in memory, can also save to file)
-chat_history = []
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Lower temperature for consistent classification
 
 
 
-# 2. Query Classifier Agent + Crew
-query_classifier_agent = Agent(
-    role="Query Classifier Agent",
-    goal=(
-        "Handle patient queries about symptoms responsibly by first asking clarifying questions "
-        "if the symptom is vague (e.g., pain, fever, fatigue, cough). "
-        "Examples of clarifying details: duration, severity, specific location, triggers, other symptoms. "
-        "Once enough info is gathered, provide a brief summary of the symptom, safe next steps, "
-        "and emphasize consulting a doctor."
-    ),
-    backstory=(
-        "You are an empathetic AI assistant helping patients understand symptoms. "
-        "Your first step is to gather important missing details before suggesting safe general advice. "
-        "You never give a diagnosis. Instead, you guide the user to professional care while showing support."
-    ),
-    llm=llm,
-    verbose=True,
-    memory=True,
-    allow_delegation=False,
-)
-
-query_task = Task(
-    description=(
-        "Conversation so far: {chat_history}\n\n"
-        "The latest patient query is: {patient_query}. "
-        "If the symptom is broad or unclear (like 'back pain', 'fever', 'tiredness'), "
-        "ask 1–2 clarifying questions such as: duration, severity, exact location, or other symptoms. "
-        "If enough detail is provided, then summarize the situation briefly, suggest safe actions (like rest, hydration, OTC relief), "
-        "and always include a disclaimer that this is not medical advice and a doctor should be consulted."
-    ),
-    expected_output=(
-        "Either (a) one or two clarifying questions, OR (b) a concise response including symptom details, "
-        "safe recommended actions, and a disclaimer."
-    ),
-    agent=query_classifier_agent
-)
-
-query_crew = Crew(
-    agents=[query_classifier_agent],
-    tasks=[query_task],
-    verbose=True,
-)
-
-
-
-# 3. Medical Summarizer Agent + Crew
-medical_summarizer_agent = Agent(
-    role="Medical Document Summarizer Agent",
-    goal=(
-        "Summarize medical research papers, instructions, or clinical documents into clear, "
-        "accessible summaries while emphasizing that this is not a substitute for professional medical advice."
-    ),
-    backstory=(
-        "You are an AI specialized in medical document summarization. "
-        "You help users quickly grasp key points, risks, and next steps from long documents. "
-        "You avoid making clinical decisions and always include a disclaimer."
-    ),
-    llm=llm,
-    verbose=True,
-    memory=True,
-    allow_delegation=False,
-)
-
-summarizer_task = Task(
-    description=(
-        "Conversation so far: {chat_history}\n\n"
-        "The document content is: {document_text}. "
-        "Summarize it into key points that are clear and easy to understand. "
-        "Highlight important warnings, safe practices, and always include a disclaimer."
-    ),
-    expected_output=(
-        "A concise summary of the document with key points, important risks, and a disclaimer."
-    ),
-    agent=medical_summarizer_agent
-)
-
-summarizer_crew = Crew(
-    agents=[medical_summarizer_agent],
-    tasks=[summarizer_task],
-    verbose=True,
-)
-
-
-
-# 4. Interactive Terminal Loop
-print("Welcome to the Medical Assistant Crew (AI).")
-print("👉 Ask a health-related question normally.")
-print("👉 To summarize a document, prefix with 'doc:'")
-print("👉 Type 'exit' to quit.\n")
 class QueryClassifierAgent:
-    """Lightweight wrapper used by the orchestrator.
-
-    Provides a `classify_query(user_input, chat_history)` method that returns
-    a structured classification dict expected by `medical_workflow.py`.
-
-    This implementation uses simple, deterministic heuristics so the orchestrator
-    can route requests correctly without calling the LLM every time. You can
-    replace or extend this with Crew/LLM-based classification later.
-    """
-
+    """Classifies user queries and determines required resources"""
     def __init__(self):
-        # keep a reference if needed to the crew-based classifier
-        self.crew = query_crew
+        # Query classification agent - returns structured JSON
+        self.agent = Agent(
+            role="Medical Query Classification Specialist",
+            goal=(
+                "Classify medical queries and determine the appropriate workflow path. "
+                "Analyze user intent, urgency level, and required resources to handle the query effectively."
+            ),
+            backstory=(
+                "You are an AI specialist that analyzes medical queries to determine the best "
+                "processing workflow. You classify queries by intent, urgency, and resource needs "
+                "to ensure patients receive appropriate assistance."
+            ),
+            llm=llm,
+            verbose=True,
+            memory=True,
+            allow_delegation=False,
+        )
 
-    def classify_query(self, user_input: str, chat_history: list) -> dict:
-        u = user_input.lower() if user_input else ""
+        # Classification task - returns structured JSON
+        self.task = Task(
+            description=(
+                "Analyze the patient query: {patient_query}\n"
+                "Chat history context: {chat_history}\n\n"
+                "Classify this query and return a JSON object with the following structure:\n"
+                "{\n"
+                "  \"intent\": \"symptom_inquiry\" | \"appointment_request\" | \"doctor_inquiry\" | \"center_information\" | \"document_request\" | \"medicine_recommendation\" | \"medicine_safety\" | \"general_health\" | \"ai_role\" | \"health_apps\" | \"small_talk\" | \"privacy\" | \"bias_discrimination\" | \"harmful_intent\" | \"accessibility\" | \"language_support\" | \"emergency\" | \"greeting\" | \"appointment_booking\" | \"negative_response\" | \"positive_response\" | \"invalid_query\" | \"farewell\" | \"self_diagnosis\" | \"dangerous_request\",\n"
+                "  \"urgency\": \"low\" | \"medium\" | \"high\" | \"emergency\",\n"
+                "  \"symptoms\": [\"list of mentioned symptoms\"],\n"
+                "  \"required_resources\": {\n"
+                "    \"rag_needed\": true/false,\n"
+                "    \"summarization_needed\": true/false,\n"
+                "    \"direct_llm\": true/false\n"
+                "  },\n"
+                "  \"risk_level\": \"low\" | \"medium\" | \"high\" | \"emergency\",\n"
+                "  \"next_agent\": \"rag_agent\" | \"solution_agent\" | \"doc_summarizer\",\n"
+                "  \"reasoning\": \"Brief explanation of classification\"\n"
+                "}\n\n"
+                "Classification Rules:\n"
+                "- symptom_inquiry: Patient describes THEIR OWN symptoms or health concerns (keywords: 'I have', 'I'm experiencing', 'I feel', 'I'm suffering from')\n"
+                "- appointment_request: Patient wants to book/schedule appointment\n"
+                "- doctor_inquiry: Patient asks about available doctors or specialists (including psychologists, psychiatrists, mental health specialists)\n"
+                "- center_information: Patient asks for address, contact, hours\n"
+                "- document_request: Patient uploads/mentions medical documents\n"
+                "- medicine_recommendation: Patient asks for specific medicine recommendations or prescriptions (keywords: 'medicine for', 'prescription for', 'drug for', 'tablet for', 'pill for', 'what should I take')\n"
+                "- medicine_safety: Patient asks about safe use of medicines (keywords: 'safely', 'safe use', 'miss a dose', 'stop early', 'share', 'after eating', 'with food')\n"
+                "- general_health: Patient asks for general health information, benefits of activities, prevention tips, causes of conditions (keywords: 'what causes', 'benefits of', 'good for', 'healthy', 'prevention', 'tips for', 'why do')\n"
+                "- ai_role: Patient asks about AI assistant capabilities or limitations (keywords: 'are you a doctor', 'can you treat', 'who made you')\n"
+                "- health_apps: Patient asks about health apps or technology (keywords: 'health app', 'app recommend')\n"
+                "- small_talk: Patient engages in casual conversation (keywords: 'tell me a joke', 'how are you', 'what's up')\n"
+                "- privacy: Patient asks about data privacy, storage, or sharing (keywords: 'store data', 'share info', 'privacy', 'confidentiality', 'someone else')\n"
+                "- bias_discrimination: Patient asks about gender, age, ethnicity, religion, or income in relation to health (keywords: 'gender', 'age', 'ethnicity', 'religion', 'income', 'wealthy', 'poor', 'rich')\n"
+                "- harmful_intent: Patient expresses self-harm, suicide ideation, or dangerous behaviors (keywords: 'harm myself', 'suicide', 'kill myself', 'self harm', 'end my life', 'want to die')\n"
+                "- accessibility: Patient requests information in alternative formats (keywords: 'visually impaired', 'blind', 'deaf', 'hearing impaired', 'simple words', 'child')\n"
+                "- language_support: Patient asks about language capabilities (keywords: 'non-english', 'spanish', 'french', 'chinese', 'language')\n"
+                "- emergency: Life-threatening symptoms (chest pain, difficulty breathing, severe bleeding, unconsciousness, stroke symptoms)\n"
+                "- greeting: Polite greetings like 'hi', 'hello', 'good morning', 'how are you'\n"
+                "- farewell: Polite farewells like 'bye', 'goodbye', 'see you', 'farewell', 'take care'\n"
+                "- appointment_booking: Patient confirms interest in booking an appointment (responses like 'yes', 'ok', 'sure' when asked about booking)\n"
+                "- negative_response: Patient responds negatively (keywords: 'no', 'nope', 'not really', 'not now')\n"
+                "- positive_response: Patient responds positively but doesn't need further assistance (keywords: 'ok', 'okay', 'yes', 'yeah', 'sure', 'thank you', 'thanks', 'thankyou')\n"
+                "- invalid_query: Meaningless text, random characters, gibberish (like 'hjhsds', 'xyzabc'), or completely unrelated content\n"
+                "- self_diagnosis: Patient wants to self-diagnose or self-treat (keywords: 'self-diagnose', 'diagnose myself', 'treat myself')\n"
+                "- dangerous_request: Patient asks for dangerous or harmful medical advice (keywords: 'dangerous way', 'harmful method', 'unsafe treatment')\n\n"
+                "RAG needed for: doctor inquiries, appointment requests, center information\n"
+                "Direct LLM for: symptom inquiries, general health questions, medicine safety questions, greetings\n"
+                "Summarization needed for: document uploads, PDF processing\n\n"
+                "General health questions (like benefits of exercise, healthy eating, etc.) should be handled with informative, "
+                "evidence-based responses that end with open-ended questions like 'Is there anything specific you'd like to know more about?'\n\n"
+                "Medicine safety questions (like 'How should I take my prescribed medicine safely?', 'What should I do if I miss a dose?') "
+                "should be handled with general safety guidelines without recommending specific drugs.\n\n"
+                "AI role clarification questions (like 'Are you a doctor?', 'Can you treat diseases?') "
+                "should clearly explain the AI assistant's capabilities and limitations.\n\n"
+                "Small talk questions (like 'Tell me a joke') can have friendly responses but should redirect to healthcare topics.\n\n"
+                "Privacy questions (like 'Can you store my health data?', 'Do you share patient info with others?') "
+                "should clearly explain data handling practices and respect for confidentiality.\n\n"
+                "Bias/discrimination questions (like 'Which gender should see a cardiologist?', 'Is this disease more common in [specific ethnicity]?') "
+                "should provide factual, evidence-based information while emphasizing that healthcare is for everyone "
+                "and decisions should be based on individual medical needs.\n\n"
+                "Harmful intent questions (like 'I want to harm myself') should be taken seriously and provide crisis "
+                "intervention resources and helpline numbers.\n\n"
+                "Accessibility questions (like 'I'm visually impaired') should provide appropriate accommodations "
+                "and alternative formats where possible.\n\n"
+                "Language support questions should clarify current language capabilities and suggest alternatives "
+                "for non-English speakers.\n\n"
+                "Emergency questions (like 'I think I am having a heart attack') should provide immediate "
+                "instructions to call emergency services.\n\n"
+                "Self-diagnosis questions should warn about the dangers of self-diagnosis and encourage "
+                "consulting with qualified healthcare professionals.\n\n"
+                "Dangerous request questions should refuse to provide harmful advice and warn about health risks.\n\n"
+                "IMPORTANT: Distinguish between greetings (friendly words) and gibberish (random letters)\n"
+                "Greeting examples: 'hi', 'hello', 'good morning', 'how are you', 'hey there'\n"
+                "Invalid examples: 'hjhsds', 'aaaa', 'xyzabc', 'qwerty', random letter combinations\n"
+                "Doctor inquiry keywords: doctor, specialist, psychologist, psychiatrist, therapist, counselor, mental health, psychology, psychiatry\n"
+                "Emergency indicators: chest pain, can't breathe, severe bleeding, unconsciousness, stroke symptoms, heart attack, severe allergic reaction, fainting"
+            ),
+            expected_output=(
+                "Valid JSON object with intent, urgency, symptoms, required_resources, risk_level, next_agent, and reasoning fields."
+            ),
+            agent=self.agent
+        )
 
-        clinic_terms = ['address', 'location', 'contact', 'phone', 'number', 'where',
-                        'doctor', 'specialist', 'appointment', 'schedule', 'book', 'available', 'hours']
-
-        symptom_terms = ['pain', 'headache', 'fever', 'cough', 'dizzy', 'dizziness', 'nausea', 'bleed', 'bleeding']
-
-        # Default classification
-        classification = {
-            "intent": "general_question",
-            "urgency": "low",
-            "required_resources": {
-                "rag_needed": False,
-                "summarization_needed": False,
-                "direct_llm": True
-            },
-            "risk_level": "low",
-            "next_agent": "solution_agent"
-        }
-
-        # If user explicitly asks clinic / contact / appointment info, require RAG
-        if any(term in u for term in clinic_terms):
-            classification.update({
-                "intent": "clinic_info",
-                "required_resources": {"rag_needed": True, "summarization_needed": False, "direct_llm": False},
-                "next_agent": "solution_agent"
-            })
+        # Crew setup
+        self.crew = Crew(
+            agents=[self.agent],
+            tasks=[self.task],
+            verbose=True,
+        )
+    
+    def classify_query(self, patient_query, chat_history=None):
+        """Classify a patient query and return structured JSON"""
+        if chat_history is None:
+            chat_history = []
+            
+        result = self.crew.kickoff(inputs={
+            "patient_query": patient_query,
+            "chat_history": chat_history
+        })
+        
+        # Extract the agent's response
+        task_result = result.tasks_output[0]
+        response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
+        
+        # Parse JSON response
+        try:
+            classification = json.loads(response.strip())
             return classification
-
-        # If user mentions document, let doc path be handled elsewhere (medical_workflow handles 'doc:')
-
-        # If symptom-like words appear, choose symptom_inquiry path
-        if any(term in u for term in symptom_terms):
-            classification.update({
+        except json.JSONDecodeError:
+            # Fallback classification if JSON parsing fails
+            print(f"Warning: Failed to parse classification JSON: {response}")
+            return {
                 "intent": "symptom_inquiry",
-                "required_resources": {"rag_needed": False, "summarization_needed": False, "direct_llm": True},
-                "next_agent": "solution_agent"
-            })
-
-            # detect urgency markers
-            if any(w in u for w in ["severe", "very", "urgent", "emergency", "bleeding", "unconscious"]):
-                classification["urgency"] = "high"
-                classification["risk_level"] = "high"
-            return classification
-
-        # fallback: leave as general question handled by LLM
-        return classification
-
+                "urgency": "medium",
+                "symptoms": [],
+                "required_resources": {
+                    "rag_needed": False,
+                    "summarization_needed": False,
+                    "direct_llm": True
+                },
+                "risk_level": "medium",
+                "next_agent": "solution_agent",
+                "reasoning": "Fallback classification due to parsing error"
+            }
 
 if __name__ == "__main__":
-    # Interactive loop preserved for manual runs
-    print("Welcome to the Medical Assistant Crew (AI).")
-    print("👉 Ask a health-related question normally.")
-    print("👉 To summarize a document, prefix with 'doc:'")
+    # Test the Query Classifier
+    classifier = QueryClassifierAgent()
+    
+    print("Query Classifier Agent Test")
+    print("👉 Enter medical queries to test classification")
     print("👉 Type 'exit' to quit.\n")
-
+    
     while True:
         user_input = input("User: ")
         if user_input.lower() == "exit":
-            print("👋 Goodbye! Stay safe.")
-            # Save chat history to file for persistence
-            with open("chat_history.json", "w", encoding="utf-8") as f:
-                json.dump(chat_history, f, indent=2)
+            print("👋 Goodbye!")
             break
-
-        if user_input.startswith("doc:"):
-            doc_text = user_input.replace("doc:", "").strip()
-            result = summarizer_crew.kickoff(inputs={
-                "document_text": doc_text,
-                "chat_history": chat_history
-            })
-            task_result = result.tasks_output[0]
-            response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
-        else:
-            # Use our crew-based classifier for richer outputs if desired
-            classifier = QueryClassifierAgent()
-            classification = classifier.classify_query(user_input, chat_history)
-            # For interactive convenience, just print the classification
-            response = json.dumps(classification, indent=2)
-
-        # Update chat history
-        chat_history.append({"role": "user", "content": user_input})
-        chat_history.append({"role": "agent", "content": response})
-
-        print("Agent:", response)
+        
+        classification = classifier.classify_query(user_input)
+        print("Classification:")
+        print(json.dumps(classification, indent=2))
+        print()

@@ -16,6 +16,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/signup", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 async def signup(payload: UserCreate, db=Depends(get_db)):
     """Register a new user"""
+    # Check if database is available
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service unavailable"
+        )
+    
     # Normalize email
     email = payload.email.lower().strip()
     
@@ -55,6 +62,13 @@ async def signup(payload: UserCreate, db=Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(payload: UserLogin, db=Depends(get_db)):
     """Login user and return JWT token"""
+    # Check if database is available
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service unavailable"
+        )
+    
     # Normalize email
     email = payload.email.lower().strip()
     

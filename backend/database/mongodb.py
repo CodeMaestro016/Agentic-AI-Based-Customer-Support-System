@@ -34,7 +34,11 @@ async def connect_to_mongo():
     except Exception as e:
         print(f"❌ Failed to connect to MongoDB: {e}")
         logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+        # Don't raise the exception, allow the application to start without DB
+        # This is for development purposes only
+        print("⚠️  Application will start without database connection - some features may not work")
+        _client = None
+        _db = None
 
 async def close_mongo_connection():
     """Close MongoDB connection"""
@@ -48,5 +52,6 @@ async def get_db() -> AsyncIOMotorDatabase:
     """Get database instance for dependency injection"""
     global _db
     if _db is None:
-        await connect_to_mongo()
+        # Return None if no database connection
+        return None
     return _db
