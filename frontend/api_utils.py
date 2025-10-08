@@ -6,7 +6,7 @@ import streamlit as st
 # Backend API configuration
 BACKEND_URL = "http://127.0.0.1:8000"
 
-def make_api_request(endpoint, method="GET", data=None, headers=None, timeout=10):
+def make_api_request(endpoint, method="GET", data=None, headers=None, timeout=30):
     """Make API request to FastAPI backend"""
     url = f"{BACKEND_URL}{endpoint}"
     
