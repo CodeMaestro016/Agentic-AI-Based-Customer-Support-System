@@ -1,6 +1,8 @@
 # Application configuration using Pydantic Settings
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from pathlib import Path
 
 class Settings(BaseSettings):
     """Application settings from environment variables"""
@@ -18,7 +20,7 @@ class Settings(BaseSettings):
 
     # Configuration for settings loading
     model_config = SettingsConfigDict(
-        env_file="../.env",
+        env_file=Path(__file__).parent.parent.parent / ".env",  # Look for .env in project root
         env_file_encoding="utf-8",
         extra="ignore",  # Ignore extra fields instead of raising validation error
         case_sensitive=False,  # Allow case-insensitive environment variable names

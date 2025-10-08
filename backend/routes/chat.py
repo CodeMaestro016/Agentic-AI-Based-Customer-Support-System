@@ -6,10 +6,11 @@ import logging
 import sys
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
 # Add agents directory to path
-agents_dir = Path(__file__).parent.parent / "agents"
-sys.path.insert(0, str(agents_dir))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "agents"))
 
 from medical_workflow import MedicalWorkflow
 
@@ -33,6 +34,7 @@ class ChatResponse(BaseModel):
     response: str
     classification: Dict[str, Any]
     rag_context: Optional[str] = None
+    followup_questions: Optional[str] = None
     session_id: str
     chat_history: List[ChatMessage]
 
@@ -76,8 +78,10 @@ async def send_message(request: ChatRequest, workflow: MedicalWorkflow = Depends
                 for msg in request.chat_history
             ]
         
-        # Process the query
-        result = workflow.process_query(request.message)
+        # Process the query in a thread pool to avoid blocking the async event loop
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(executor, workflow.process_query, request.message)
         
         # Generate session ID if not provided
         session_id = request.session_id or f"session_{len(workflow.chat_history)}"
@@ -92,6 +96,7 @@ async def send_message(request: ChatRequest, workflow: MedicalWorkflow = Depends
             response=result["final_response"],
             classification=result["classification"],
             rag_context=result.get("rag_context"),
+            followup_questions=result.get("followup_questions"),
             session_id=session_id,
             chat_history=chat_history
         )
@@ -124,8 +129,10 @@ async def process_document(request: DocumentRequest, workflow: MedicalWorkflow =
         else:
             doc_query = f"doc:{request.document_content}"
         
-        # Process the document
-        result = workflow.process_query(doc_query)
+        # Process the document in a thread pool to avoid blocking the async event loop
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(executor, workflow.process_query, doc_query)
         
         # Generate session ID if not provided
         session_id = request.session_id or f"doc_session_{len(workflow.chat_history)}"
@@ -140,6 +147,7 @@ async def process_document(request: DocumentRequest, workflow: MedicalWorkflow =
             response=result["final_response"],
             classification=result["classification"],
             rag_context=result.get("document_summary", "No document summary available"),
+            followup_questions=result.get("followup_questions"),
             session_id=session_id,
             chat_history=chat_history
         )
