@@ -353,11 +353,54 @@ def chat_page():
             # Add user message to chat history FIRST
             st.session_state.messages.append({"role": "user", "content": prompt})
             
-            # Generate assistant response (placeholder)
-            response = f"Thank you for your message: '{prompt}'. This is a placeholder response. In a real implementation, this would connect to your AI backend."
+            # Show loading indicator
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                message_placeholder.markdown("Thinking...")
             
-            # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            # Call backend API to get response
+            try:
+                # Import API utilities
+                from api_utils import make_api_request, get_auth_headers
+                
+                # Prepare chat history for API
+                chat_history = [
+                    {"role": msg["role"], "content": msg["content"]} 
+                    for msg in st.session_state.messages[:-1]  # Exclude current user message
+                ]
+                
+                # Prepare request data
+                data = {
+                    "message": prompt,
+                    "chat_history": chat_history
+                }
+                
+                # Make API request with increased timeout
+                headers = get_auth_headers()
+                success, response_data, error = make_api_request(
+                    "/api/chat/message", 
+                    method="POST", 
+                    data=data, 
+                    headers=headers,
+                    timeout=60  # Increased timeout for AI processing
+                )
+                
+                if success:
+                    # Extract response from backend
+                    assistant_response = response_data.get("response", "No response from assistant")
+                    # The response now includes everything naturally combined
+                else:
+                    # Handle error case
+                    assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
+            except Exception as e:
+                # Handle unexpected errors
+                assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
+            
+            # Update assistant message
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            
+            # Update the display
+            message_placeholder.markdown(assistant_response)
             
             # Rerun to refresh the display with updated messages
             st.rerun()
