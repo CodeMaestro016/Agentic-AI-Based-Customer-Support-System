@@ -202,44 +202,9 @@ def render_modern_header_with_user():
         <div class="brand-section">
             <div class="brand-icon">🩺</div>
             <h1 class="brand-text">MediConnect Support</h1>
-<<<<<<< HEAD
-        </div>
+            </div>
         """, unsafe_allow_html=True)
-    
-    with col2:
-        # User section with proper alignment
-        if user_email:
-            # Create user info section
-            user_col1, user_col2 = st.columns([2, 1])
-            
-            with user_col1:
-                st.markdown(f"""
-                <div style="text-align: right; padding-top: 8px;">
-                    <div class="welcome-text">Welcome,</div>
-                    <div class="user-email">{user_email}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with user_col2:
-                if st.button("🚪 Logout", key="modern_logout_btn", help="Click to logout"):
-                    clear_auth_session()
-                    st.session_state.page = 'login'
-                    st.success("Logged out successfully!")
-                    st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
-def render_footer():
-    st.markdown(
-        """
-        <hr>
-        <div style="text-align:center; font-size:14px; color:#555;">
-            © 2025 MediConnect | Powered by Streamlit
-=======
->>>>>>> origin/development
-        </div>
-        """, unsafe_allow_html=True)
-    
     with col2:
         # User section with proper alignment
         if user_email:
@@ -260,7 +225,7 @@ def render_footer():
                     st.session_state.page = 'login'
                     st.success("Logged out successfully!")
                     st.rerun()
-    
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 def render_footer():
