@@ -92,6 +92,91 @@ class MedicalWorkflow:
                 "final_response": emergency_response
             }
         
+        # Handle harmful intent cases
+        if classification.get("intent") == "harmful_intent":
+            crisis_response = (
+                "I'm really concerned about you and want to help. If you're having thoughts of harming yourself, "
+                "please reach out for immediate support:\n\n"
+                "• **Emergency Services**: Call 911/119 immediately\n"
+                "• **Crisis Hotline**: Contact your local crisis intervention hotline\n"
+                "• **Go to ER**: Visit the nearest emergency room\n\n"
+                "You are not alone, and support is available. Please don't hesitate to reach out to a trusted friend, "
+                "family member, or healthcare professional right away."
+            )
+            self.chat_history.append({"role": "assistant", "content": crisis_response})
+            return {
+                "classification": classification,
+                "rag_context": None,
+                "final_response": crisis_response
+            }
+        
+        # Handle dangerous request cases
+        if classification.get("intent") == "dangerous_request":
+            dangerous_response = (
+                "I'm sorry, but I can't provide information about dangerous or harmful medical practices. "
+                "Such practices can be extremely risky and potentially life-threatening.\n\n"
+                "If you're looking for safe and effective treatment options, I strongly encourage you to:\n"
+                "• Consult with a qualified healthcare professional\n"
+                "• Follow evidence-based medical guidelines\n"
+                "• Use only approved treatments and medications as prescribed\n\n"
+                "Your safety is paramount. Is there a safe and appropriate healthcare question I can help you with?"
+            )
+            self.chat_history.append({"role": "assistant", "content": dangerous_response})
+            return {
+                "classification": classification,
+                "rag_context": None,
+                "final_response": dangerous_response
+            }
+        
+        # Handle self-diagnosis cases
+        if classification.get("intent") == "self_diagnosis":
+            self_diagnosis_response = (
+                "I understand you're interested in understanding your health better, but I want to emphasize "
+                "that self-diagnosis can be risky and may lead to misunderstandings about your condition.\n\n"
+                "Accurate diagnosis requires:\n"
+                "• Professional medical examinations\n"
+                "• Appropriate diagnostic tests\n"
+                "• Evaluation by qualified healthcare providers\n\n"
+                "I encourage you to:\n"
+                "• Schedule an appointment with a healthcare professional\n"
+                "• Share your symptoms and concerns with a doctor\n"
+                "• Follow professional medical advice for treatment\n\n"
+                "Would you like help booking an appointment with one of our doctors to discuss your concerns properly?"
+            )
+            self.chat_history.append({"role": "assistant", "content": self_diagnosis_response})
+            return {
+                "classification": classification,
+                "rag_context": None,
+                "final_response": self_diagnosis_response
+            }
+        
+        # Handle farewell messages (both from classification and keyword matching)
+        if classification.get("intent") == "farewell":
+            farewell_response = (
+                "Thank you for visiting MediConnect! If you have any health-related questions in the future, "
+                "please don't hesitate to reach out again. Take care and stay healthy! 👋"
+            )
+            self.chat_history.append({"role": "assistant", "content": farewell_response})
+            return {
+                "classification": classification,
+                "rag_context": None,
+                "final_response": farewell_response
+            }
+        
+        # Handle farewell messages by keyword matching as backup
+        farewell_keywords = ["bye", "goodbye", "see you", "farewell", "take care"]
+        if any(farewell in user_input.lower() for farewell in farewell_keywords):
+            farewell_response = (
+                "Thank you for visiting MediConnect! If you have any health-related questions in the future, "
+                "please don't hesitate to reach out again. Take care and stay healthy! 👋"
+            )
+            self.chat_history.append({"role": "assistant", "content": farewell_response})
+            return {
+                "classification": {"intent": "farewell", "urgency": "low"},
+                "rag_context": None,
+                "final_response": farewell_response
+            }
+        
         # Check if RAG (knowledge base search) is needed based on classification
         rag_context = None
         if classification.get("required_resources", {}).get("rag_needed", False):
@@ -136,13 +221,72 @@ class MedicalWorkflow:
         unified_response = self.solution_agent.generate_unified_response(**response_context)
         print(f"Unified Response: {unified_response}")
         
+        # Generate follow-up questions for most intents except special cases
+        no_followup_intents = [
+            "greeting", "farewell", "negative_response", "positive_response", 
+            "invalid_query", "emergency", "harmful_intent", "dangerous_request",
+            "appointment_booking", "self_diagnosis", "ai_role"
+        ]
+        
+        final_response = unified_response
+        
+        if classification.get("intent") not in no_followup_intents:
+            print("\nStep 5: Generating Follow-up Questions...")
+            followup_questions = self.followup_agent.generate_followup(
+                solution=unified_response,
+                original_query=user_input,
+                classification=classification,
+                chat_history=self.chat_history
+            )
+            print(f"Follow-up Questions: {followup_questions}")
+            
+            # Combine the main response with follow-up questions into a single natural response
+            if followup_questions and followup_questions.strip():
+                # Clean up the follow-up questions to make them more concise
+                cleaned_followups = followup_questions.strip()
+                
+                # Remove generic catch-all questions
+                generic_questions = [
+                    "is there anything else i can help you with?",
+                    "is there anything else i can assist you with?",
+                    "is there anything else you'd like to know?",
+                    "do you have any other questions?",
+                    "anything else i can help with?"
+                ]
+                
+                is_generic = any(gq in cleaned_followups.lower() for gq in generic_questions)
+                
+                # If there are multiple questions, format them nicely
+                if '\n' in cleaned_followups or ';' in cleaned_followups:
+                    # Split by newlines or semicolons and take only the first question
+                    lines = [line.strip() for line in cleaned_followups.split('\n') if line.strip()]
+                    if not lines:
+                        lines = [q.strip() for q in cleaned_followups.split(';') if q.strip()]
+                    
+                    # Take only the first meaningful question
+                    if lines:
+                        first_question = lines[0]
+                        if first_question.endswith('?') or first_question.endswith('.'):
+                            cleaned_followups = first_question
+                        else:
+                            cleaned_followups = first_question + '?'
+                
+                # Only add follow-up if it's not generic and not empty
+                if cleaned_followups and cleaned_followups.strip() and not is_generic:
+                    # Combine the unified response with follow-up questions into a single natural response
+                    # Add proper punctuation and spacing
+                    if final_response.strip().endswith(('.', '!', '?')):
+                        final_response = f"{final_response} {cleaned_followups}"
+                    else:
+                        final_response = f"{final_response}. {cleaned_followups}"
+        
         # Update chat history
-        self.chat_history.append({"role": "assistant", "content": unified_response})
+        self.chat_history.append({"role": "assistant", "content": final_response})
         
         return {
             "classification": classification,
             "rag_context": rag_context,
-            "final_response": unified_response
+            "final_response": final_response
         }
     
     def _handle_document_query(self, user_input):
@@ -189,26 +333,65 @@ class MedicalWorkflow:
         )
         print(f"Solution: {solution}")
         
-        # Step 3: Follow-up Questions
-        print("\nStep 3: Generating Follow-up...")
-        followup = self.followup_agent.generate_followup(
+        # Step 3: Generate Follow-up Questions
+        print("\nStep 3: Generating Follow-up Questions...")
+        followup_questions = self.followup_agent.generate_followup(
             solution=solution,
             original_query=user_input,
             classification=classification,
             chat_history=self.chat_history
         )
-        print(f"Follow-up: {followup}")
+        print(f"Follow-up Questions: {followup_questions}")
+        
+        # Combine the main response with follow-up questions into a single natural response
+        final_response = solution
+        
+        if followup_questions and followup_questions.strip():
+            # Clean up the follow-up questions to make them more concise
+            cleaned_followups = followup_questions.strip()
+            
+            # Remove generic catch-all questions
+            generic_questions = [
+                "is there anything else i can help you with?",
+                "is there anything else i can assist you with?",
+                "is there anything else you'd like to know?",
+                "do you have any other questions?",
+                "anything else i can help with?"
+            ]
+            
+            is_generic = any(gq in cleaned_followups.lower() for gq in generic_questions)
+            
+            # If there are multiple questions, format them nicely
+            if '\n' in cleaned_followups or ';' in cleaned_followups:
+                # Split by newlines or semicolons and take only the first question
+                lines = [line.strip() for line in cleaned_followups.split('\n') if line.strip()]
+                if not lines:
+                    lines = [q.strip() for q in cleaned_followups.split(';') if q.strip()]
+                
+                # Take only the first meaningful question
+                if lines:
+                    first_question = lines[0]
+                    if first_question.endswith('?') or first_question.endswith('.'):
+                        cleaned_followups = first_question
+                    else:
+                        cleaned_followups = first_question + '?'
+            
+            # Add to response if not generic and not empty
+            if cleaned_followups and cleaned_followups.strip() and not is_generic:
+                # Add proper punctuation and spacing
+                if final_response.strip().endswith(('.', '!', '?')):
+                    final_response = f"{final_response} {cleaned_followups}"
+                else:
+                    final_response = f"{final_response}. {cleaned_followups}"
         
         # Update chat history
         self.chat_history.append({"role": "user", "content": user_input})
-        self.chat_history.append({"role": "assistant", "content": f"{solution}\n\n{followup}"})
+        self.chat_history.append({"role": "assistant", "content": final_response})
         
         return {
             "classification": classification,
             "document_summary": doc_summary,
-            "solution": solution,
-            "followup": followup,
-            "final_response": f"{solution}\n\n{followup}"
+            "final_response": final_response
         }
     
     def _enhance_rag_query(self, user_input, classification):
