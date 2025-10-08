@@ -11,137 +11,35 @@ sys.path.insert(0, frontend_dir)
 # Import layout functions
 from layout import render_footer
 from api_utils import clear_auth_session
+<<<<<<< HEAD
+from layout import render_header, render_footer, render_modern_header_with_user
 
-def render_user_profile_control():
-    """Render responsive user profile control with dropdown"""
-    user_email = st.session_state.get('user', {}).get('email', 'user@example.com')
-    user_name = user_email.split('@')[0] if user_email else 'User'
-    avatar_letter = user_name[0].upper() if user_name else 'U'
-    
-    # Create a container for the profile control
-    profile_container = st.container()
-    
-    with profile_container:
-        # Create columns for positioning
-        col1, col2 = st.columns([4, 1])
-        
-        with col2:
-            # Create a popover for the dropdown
-            with st.popover("👤", use_container_width=False):
-                st.markdown(f"""
-                <div style="min-width: 200px; padding: 8px;">
-                    <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ff6b9d 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
-                            {avatar_letter}
-                        </div>
-                        <div>
-                            <div style="color: white; font-weight: 600; font-size: 14px; margin: 0;">{user_name}</div>
-                            <div style="color: #b0b0b0; font-size: 12px; margin: 2px 0 0 0;">{user_email}</div>
-                        </div>
-                    </div>
-                    <div style="padding-top: 8px;">
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Settings button
-                if st.button("⚙️ Settings", use_container_width=True, key="settings_btn"):
-                    st.info("Settings functionality coming soon!")
-                
-                # Logout button
-                if st.button("🚪 Logout", use_container_width=True, key="logout_btn", type="secondary"):
-                    clear_auth_session()
-                    st.session_state.page = 'home'
-                    st.success("Logged out successfully!")
-                    st.rerun()
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-    
-    # Add custom styling for the profile control
-    st.markdown(f"""
-    <style>
-    /* Position the popover button as an avatar */
-    div[data-testid="column"]:last-child .stPopover > button {{
-        position: fixed !important;
-        top: 20px !important;
-        right: 20px !important;
-        width: 45px !important;
-        height: 45px !important;
-        border-radius: 50% !important;
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ff6b9d 100%) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        font-size: 18px !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-        transition: all 0.3s ease !important;
-        z-index: 1000 !important;
-        padding: 0 !important;
-    }}
-    
-    div[data-testid="column"]:last-child .stPopover > button:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-    }}
-    
-    /* Style the popover content */
-    .stPopover > div[data-testid="stPopover"] {{
-        background: rgba(30, 30, 50, 0.95) !important;
-        backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
-        margin-top: 10px !important;
-    }}
-    
-    /* Style buttons inside popover */
-    .stPopover .stButton > button {{
-        width: 100% !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        margin: 4px 0 !important;
-        transition: all 0.2s ease !important;
-    }}
-    
-    .stPopover .stButton > button:hover {{
-        background: rgba(255, 255, 255, 0.2) !important;
-        transform: translateX(2px) !important;
-    }}
-    
-    /* Special styling for logout button */
-    .stPopover .stButton:last-child > button {{
-        background: rgba(255, 107, 107, 0.1) !important;
-        color: #ff6b6b !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-        margin-top: 8px !important;
-    }}
-    
-    .stPopover .stButton:last-child > button:hover {{
-        background: rgba(255, 107, 107, 0.2) !important;
-    }}
-    
-    /* Replace button text with avatar letter */
-    div[data-testid="column"]:last-child .stPopover > button p {{
-        display: none;
-    }}
-    
-    div[data-testid="column"]:last-child .stPopover > button::after {{
-        content: "{avatar_letter}";
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-    }}
-    
-    /* Hide the column container */
-    div[data-testid="column"]:first-child {{
-        display: none;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+def chat_ui():
+    """Chat interface for authenticated users"""
+    # Render modern header with integrated user info and logout
+    render_modern_header_with_user()
 
+    st.write("Welcome to **MediConnect**! How can we assist you today?")
+
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+
+    for msg in st.session_state["messages"]:
+        if msg["role"] == "user":
+            st.markdown(f"<div class='user-msg'>🧑 {msg['content']}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='bot-msg'>🤖 {msg['content']}</div>", unsafe_allow_html=True)
+
+    with st.form(key="chat_form", clear_on_submit=True):
+        query = st.text_input("💡 Type your question here:", placeholder="Type your message here...")
+        submit_button = st.form_submit_button("Send")
+
+    if submit_button and query:
+        st.session_state["messages"].append({"role": "user", "content": query})
+        st.session_state["messages"].append({"role": "bot", "content": "🤖 Bot response placeholder"})
+        st.rerun()
+
+=======
 
 def render_user_profile_control():
     """Render responsive user profile control with dropdown"""
@@ -535,9 +433,10 @@ def chat_page():
             
             # Rerun to refresh the display with updated messages
             st.rerun()
+    
+>>>>>>> origin/development
+    # Render footer
+    render_footer()
 
-            # Render footer
-            render_footer()
-
-        if __name__ == "__main__":
-            chat_page()
+if __name__ == "__main__":
+    chat_page()

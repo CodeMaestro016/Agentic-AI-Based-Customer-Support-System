@@ -5,18 +5,24 @@ import os
 from pathlib import Path
 
 class Settings(BaseSettings):
-    """Application settings from environment variables"""
-    
-    # MongoDB configuration
-    MONGO_URI: str
-    MONGO_DB_NAME: str
-    
+    """Application settings from environment variables.
+
+    Provide sensible development defaults so the application can start
+    without requiring every environment variable during local development.
+    In production, override these using a `.env` file or real environment
+    variables.
+    """
+
+    # MongoDB configuration (default to local MongoDB for development)
+    MONGO_URI: str = "mongodb://localhost:27017"
+    MONGO_DB_NAME: str = "customer_support_db"
+
     # JWT authentication configuration
-    JWT_SECRET: str
+    JWT_SECRET: str = "dev-secret-change-me"
     JWT_ALGORITHM: str = "HS256"
-    
-    # OpenAI API configuration
-    OPENAI_API_KEY: str
+
+    # OpenAI API configuration (empty by default; set in env for production)
+    OPENAI_API_KEY: str = ""
 
     # Configuration for settings loading
     model_config = SettingsConfigDict(
