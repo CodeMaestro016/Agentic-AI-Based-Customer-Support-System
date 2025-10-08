@@ -1,42 +1,10 @@
 [
   {
     "role": "user",
-    "content": "chest pain"
+    "content": "i have a headche"
   },
   {
     "role": "agent",
-    "content": "Can you please tell me how long you have been experiencing the chest pain and how severe it is on a scale from 1 to 10? Additionally, are you noticing any other symptoms, such as shortness of breath, nausea, or pain radiating to your arms or jaw? It's important to understand these details before considering safe next steps. Please remember, this is not medical advice, and I recommend consulting a doctor for a thorough evaluation."
-  },
-  {
-    "role": "user",
-    "content": "pain has been 1 week"
-  },
-  {
-    "role": "agent",
-    "content": "Thank you for sharing that the chest pain has been present for one week. Can you please describe the severity of the pain on a scale from 1 to 10? Additionally, are you experiencing any other symptoms, such as shortness of breath, nausea, or pain that radiates to other areas like your arms or jaw? These details are very important for understanding your situation better. Please remember, this is not medical advice, and I strongly recommend consulting a doctor for a thorough evaluation."
-  },
-  {
-    "role": "user",
-    "content": "pain scale like 3 out of 10. no other symptoms. "
-  },
-  {
-    "role": "agent",
-    "content": "Thank you for providing the additional information about your chest pain. Since you mentioned that the pain has been at a severity of about 3 out of 10 and that you are not experiencing any other symptoms, this is useful to know. However, chest pain can have various causes, and even mild pain should be taken seriously, especially if it has persisted for a week. \n\nFor now, I recommend that you rest and stay hydrated. Over-the-counter pain relief may help alleviate discomfort, but please keep in mind that this is not medical advice. It is very important that you consult a doctor for a thorough evaluation, especially since chest pain can sometimes indicate underlying issues that need professional attention. Please take care of yourself!"
-  },
-  {
-    "role": "user",
-    "content": "which doctor should i channel?"
-  },
-  {
-    "role": "agent",
-    "content": "Given that you are experiencing chest pain that has persisted for one week at a severity of about 3 out of 10, I recommend that you consult with a healthcare provider who specializes in cardiology or your primary care physician. They can help evaluate your symptoms and determine if any further testing or treatment is necessary. In the meantime, ensure you rest, stay hydrated, and consider over-the-counter pain relief if needed. Please remember, this is not medical advice, and it is very important to seek professional care for your symptoms. Take care of yourself!"
-  },
-  {
-    "role": "user",
-    "content": "ok thank you so much your support"
-  },
-  {
-    "role": "agent",
-    "content": "You're very welcome! I'm glad to be here for you. If you have any more questions or concerns about your symptoms, please don't hesitate to reach out. Remember, it's important to stay vigilant with your health. If your chest pain changes in severity or if you start experiencing any new symptoms, please consult your healthcare provider promptly. Take care of yourself, and don't hesitate to seek the support you need!"
+    "content": "Could you please share how long you have been experiencing the headache and how severe it is on a scale from 1 to 10? Additionally, do you have any other symptoms accompanying the headache, such as nausea, sensitivity to light, or any recent changes in your routine? This information will help me better understand your situation."
   }
 ]

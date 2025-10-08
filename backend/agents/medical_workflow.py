@@ -200,7 +200,7 @@ def main():
     """Main interactive loop - Complete Workflow with RAG and Doc Support"""
     workflow = MedicalWorkflow()
     
-    print("Medical AI Workflow System")
+    print("Medical AI Workflow System ")
     print("Supported Flows:")
     print("1. Simple: Query_Classifier → Solution_Agent → Follow-up_Agent")
     print("2. With RAG: Query_Classifier → RAG_Agent → Solution_Agent → Follow-up_Agent")
