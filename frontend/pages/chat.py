@@ -3,6 +3,12 @@
 import streamlit as st
 import sys
 import os
+import io
+
+try:
+    import pdfplumber  # Prefer pdfplumber for robust text extraction
+except Exception:  # Fallback if not available; Streamlit will surface error on use
+    pdfplumber = None
 
 # Add frontend directory to path
 frontend_dir = os.path.join(os.path.dirname(__file__), '..')
@@ -339,6 +345,73 @@ def chat_page():
     # Chat functionality
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        # PDF upload and summarization panel
+        with st.expander("📄 Upload PDF for summary", expanded=False):
+            uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"], accept_multiple_files=False)
+            if uploaded_file is not None:
+                if pdfplumber is None:
+                    st.error("PDF processing dependency not available. Please install pdfplumber.")
+                else:
+                    if st.button("Summarize PDF", use_container_width=True):
+                        try:
+                            with st.spinner("Reading and summarizing PDF..."):
+                                # Extract text from uploaded PDF
+                                extracted_text_parts = []
+                                with pdfplumber.open(io.BytesIO(uploaded_file.read())) as pdf:
+                                    for page in pdf.pages:
+                                        page_text = page.extract_text() or ""
+                                        if page_text.strip():
+                                            extracted_text_parts.append(page_text)
+                                extracted_text = "\n\n".join(extracted_text_parts).strip()
+
+                                if not extracted_text:
+                                    st.warning("Could not extract text from the PDF. Please try another file.")
+                                else:
+                                    # Prepare and send to backend document endpoint
+                                    from api_utils import make_api_request, get_auth_headers
+
+                                    chat_history = [
+                                        {"role": msg["role"], "content": msg["content"]}
+                                        for msg in st.session_state.get("messages", [])
+                                    ]
+
+                                    data = {
+                                        "document_content": extracted_text,
+                                        "document_type": "text",
+                                        "chat_history": chat_history
+                                    }
+
+                                    headers = get_auth_headers()
+                                    success, response_data, error = make_api_request(
+                                        "/api/chat/document",
+                                        method="POST",
+                                        data=data,
+                                        headers=headers,
+                                        timeout=120
+                                    )
+
+                                    if success and response_data:
+                                        document_summary = response_data.get("rag_context") or "No summary returned."
+                                        assistant_response = response_data.get("response", "")
+
+                                        # Show the summary prominently
+                                        st.markdown("**Summary:**")
+                                        st.markdown(document_summary)
+
+                                        # Append to chat history for continuity
+                                        if "messages" not in st.session_state:
+                                            st.session_state.messages = []
+                                        st.session_state.messages.append({"role": "assistant", "content": f"Here is the summary of your PDF:\n\n{document_summary}"})
+                                        if assistant_response:
+                                            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+
+                                        st.success("PDF summarized successfully.")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Failed to summarize PDF: {error}")
+                        except Exception as e:
+                            st.error(f"An error occurred while processing the PDF: {str(e)}")
+
         # Initialize chat history
         if "messages" not in st.session_state:
             st.session_state.messages = []
