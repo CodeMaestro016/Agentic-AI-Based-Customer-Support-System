@@ -1,9 +1,8 @@
-# Modern chat page with user profile control and MediConnect theme
-
 import streamlit as st
 import sys
 import os
 import io
+import uuid
 
 try:
     import pdfplumber  # Prefer pdfplumber for robust text extraction
@@ -16,7 +15,7 @@ sys.path.insert(0, frontend_dir)
 
 # Import layout functions
 from layout import render_footer
-from api_utils import clear_auth_session
+from api_utils import clear_auth_session, make_api_request, get_auth_headers
 
 def render_user_profile_control():
     """Render responsive user profile control with dropdown"""
@@ -147,8 +146,6 @@ def render_user_profile_control():
     }}
     </style>
     """, unsafe_allow_html=True)
-
-
 
 def chat_page():
     """Main chat page function"""
@@ -345,11 +342,76 @@ def chat_page():
     # Chat functionality
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Inline PDF upload popover aligned near the chat input
-        upload_ui = st.container()
-        with upload_ui:
-            left_sp, mid_sp, right_sp = st.columns([6, 1, 1])
-            with right_sp:
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+        
+        # Chat input container with integrated PDF upload button
+        chat_input_container = st.container()
+        with chat_input_container:
+            # Create a layout for chat input and PDF upload button
+            input_col, button_col = st.columns([10, 1])
+            
+            with input_col:
+                # Chat input
+                if prompt := st.chat_input("Type your message here..."):
+                    # Add user message to chat history
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    
+                    # Show loading indicator
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        message_placeholder.markdown("Thinking...")
+                    
+                    # Call backend API to get response
+                    try:
+                        from api_utils import make_api_request, get_auth_headers
+                        
+                        # Prepare chat history for API
+                        chat_history = [
+                            {"role": msg["role"], "content": msg["content"]} 
+                            for msg in st.session_state.messages[:-1]  # Exclude current user message
+                        ]
+                        
+                        # Prepare request data
+                        data = {
+                            "message": prompt,
+                            "chat_history": chat_history
+                        }
+                        
+                        # Make API request with increased timeout
+                        headers = get_auth_headers()
+                        success, response_data, error = make_api_request(
+                            "/api/chat/message", 
+                            method="POST", 
+                            data=data, 
+                            headers=headers,
+                            timeout=60
+                        )
+                        
+                        if success:
+                            assistant_response = response_data.get("response", "No response from assistant")
+                        else:
+                            assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
+                    except Exception as e:
+                        assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
+                    
+                    # Update assistant message
+                    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                    
+                    # Update the display
+                    message_placeholder.markdown(assistant_response)
+                    
+                    # Rerun to refresh the display with updated messages
+                    st.rerun()
+            
+            with button_col:
+                # PDF upload popover
                 with st.popover("📎", use_container_width=True):
                     st.markdown("**Upload PDF**")
                     uploaded_file_inline = st.file_uploader("Select a PDF", type=["pdf"], accept_multiple_files=False, key="pdf_uploader_inline")
@@ -408,82 +470,60 @@ def chat_page():
                                 except Exception as e:
                                     st.error(f"Error processing PDF: {str(e)}")
 
-        # Slight UI polish to position the clip icon near bottom-right
+        # Custom styling for chat input and PDF upload button
         st.markdown("""
         <style>
-        /* Make the clip button compact */
-        .stPopover > button {
-            padding: 4px 8px !important;
+        /* Ensure chat input and PDF button are aligned horizontally */
+        div[data-testid="column"]:last-child .stPopover > button {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 8px !important;
+            padding: 10px !important;
+            height: 48px !important; /* Match chat input height */
+            width: 48px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease !important;
+        }
+        
+        div[data-testid="column"]:last-child .stPopover > button:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        /* Position the PDF upload button close to the chat input */
+        div[data-testid="column"]:last-child {
+            padding-left: 8px !important;
+        }
+        
+        /* Style the popover content */
+        .stPopover > div[data-testid="stPopover"] {
+            background: rgba(30, 30, 50, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+            margin-top: 10px !important;
+            min-width: 250px !important;
+        }
+        
+        /* Adjust chat input styling to align with button */
+        .stChatInput {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 15px !important;
+            height: 48px !important;
+        }
+        
+        .stChatInput input {
+            background: transparent !important;
+            color: white !important;
+            border: none !important;
+            height: 46px !important;
         }
         </style>
         """, unsafe_allow_html=True)
-
-        # Initialize chat history
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-        
-        # Display chat messages
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-        
-        # Chat input
-        if prompt := st.chat_input("Type your message here..."):
-            # Add user message to chat history FIRST
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            
-            # Show loading indicator
-            with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                message_placeholder.markdown("Thinking...")
-            
-            # Call backend API to get response
-            try:
-                # Import API utilities
-                from api_utils import make_api_request, get_auth_headers
-                
-                # Prepare chat history for API
-                chat_history = [
-                    {"role": msg["role"], "content": msg["content"]} 
-                    for msg in st.session_state.messages[:-1]  # Exclude current user message
-                ]
-                
-                # Prepare request data
-                data = {
-                    "message": prompt,
-                    "chat_history": chat_history
-                }
-                
-                # Make API request with increased timeout
-                headers = get_auth_headers()
-                success, response_data, error = make_api_request(
-                    "/api/chat/message", 
-                    method="POST", 
-                    data=data, 
-                    headers=headers,
-                    timeout=60  # Increased timeout for AI processing
-                )
-                
-                if success:
-                    # Extract response from backend
-                    assistant_response = response_data.get("response", "No response from assistant")
-                    # The response now includes everything naturally combined
-                else:
-                    # Handle error case
-                    assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
-            except Exception as e:
-                # Handle unexpected errors
-                assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
-            
-            # Update assistant message
-            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-            
-            # Update the display
-            message_placeholder.markdown(assistant_response)
-            
-            # Rerun to refresh the display with updated messages
-            st.rerun()
     
     # Render footer
     render_footer()
