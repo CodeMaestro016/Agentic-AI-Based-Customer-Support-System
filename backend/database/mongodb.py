@@ -55,3 +55,18 @@ async def get_db() -> AsyncIOMotorDatabase:
         # Return None if no database connection
         return None
     return _db
+
+async def insert_chat_detail(chat_detail: dict):
+    """Insert chat detail into MongoDB"""
+    global _db
+    if _db is None:
+        logger.warning("No database connection available, skipping chat detail insertion")
+        return None
+    try:
+        collection = _db["chat_details"]
+        result = await collection.insert_one(chat_detail)
+        logger.info(f"Chat detail inserted with ID: {result.inserted_id}")
+        return result.inserted_id
+    except Exception as e:
+        logger.error(f"Failed to insert chat detail: {e}")
+        return None
