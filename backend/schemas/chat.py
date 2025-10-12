@@ -17,6 +17,7 @@ class ChatSession(BaseModel):
 
 class ChatDetail(BaseModel):
     session_id: str
+    user_id: Optional[str] = None
     message: str
     chat_history: List[ChatMessage]
     response: str
@@ -25,3 +26,4 @@ class ChatDetail(BaseModel):
     followup_questions: Optional[str] = None
     hashed_details: str  # Hashed version of the chat details
     created_at: datetime = datetime.utcnow()
+    updated_at: Optional[datetime] = None

@@ -56,17 +56,24 @@ async def get_db() -> AsyncIOMotorDatabase:
         return None
     return _db
 
-async def insert_chat_detail(chat_detail: dict):
-    """Insert chat detail into MongoDB"""
+async def upsert_chat_detail(chat_detail: dict):
+    """Upsert chat detail into MongoDB based on session_id"""
     global _db
     if _db is None:
-        logger.warning("No database connection available, skipping chat detail insertion")
+        logger.warning("No database connection available, skipping chat detail upsert")
         return None
     try:
         collection = _db["chat_details"]
-        result = await collection.insert_one(chat_detail)
-        logger.info(f"Chat detail inserted with ID: {result.inserted_id}")
-        return result.inserted_id
+        result = await collection.update_one(
+            {"session_id": chat_detail["session_id"]},
+            {"$set": chat_detail},
+            upsert=True
+        )
+        if result.upserted_id:
+            logger.info(f"Chat detail upserted with new ID: {result.upserted_id}")
+        else:
+            logger.info(f"Chat detail updated for session_id: {chat_detail['session_id']}")
+        return result.upserted_id or result.modified_count
     except Exception as e:
-        logger.error(f"Failed to insert chat detail: {e}")
+        logger.error(f"Failed to upsert chat detail: {e}")
         return None
