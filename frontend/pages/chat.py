@@ -354,61 +354,8 @@ def chat_page():
         # Chat input container with integrated PDF upload button
         chat_input_container = st.container()
         with chat_input_container:
-            # Create a layout for chat input and PDF upload button
-            input_col, button_col = st.columns([10, 1])
-            
-            with input_col:
-                # Chat input
-                if prompt := st.chat_input("Type your message here..."):
-                    # Add user message to chat history
-                    st.session_state.messages.append({"role": "user", "content": prompt})
-                    
-                    # Show loading indicator
-                    with st.chat_message("assistant"):
-                        message_placeholder = st.empty()
-                        message_placeholder.markdown("Thinking...")
-                    
-                    # Call backend API to get response
-                    try:
-                        from api_utils import make_api_request, get_auth_headers
-                        
-                        # Prepare chat history for API
-                        chat_history = [
-                            {"role": msg["role"], "content": msg["content"]} 
-                            for msg in st.session_state.messages[:-1]  # Exclude current user message
-                        ]
-                        
-                        # Prepare request data
-                        data = {
-                            "message": prompt,
-                            "chat_history": chat_history
-                        }
-                        
-                        # Make API request with increased timeout
-                        headers = get_auth_headers()
-                        success, response_data, error = make_api_request(
-                            "/api/chat/message", 
-                            method="POST", 
-                            data=data, 
-                            headers=headers,
-                            timeout=60
-                        )
-                        
-                        if success:
-                            assistant_response = response_data.get("response", "No response from assistant")
-                        else:
-                            assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
-                    except Exception as e:
-                        assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
-                    
-                    # Update assistant message
-                    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-                    
-                    # Update the display
-                    message_placeholder.markdown(assistant_response)
-                    
-                    # Rerun to refresh the display with updated messages
-                    st.rerun()
+            # Create a layout for PDF upload button and chat input
+            button_col, input_col = st.columns([1, 10])
             
             with button_col:
                 # PDF upload popover
@@ -469,12 +416,65 @@ def chat_page():
                                                 st.error(f"Failed to summarize PDF: {error_inline}")
                                 except Exception as e:
                                     st.error(f"Error processing PDF: {str(e)}")
+            
+            with input_col:
+                # Chat input
+                if prompt := st.chat_input("Type your message here..."):
+                    # Add user message to chat history
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    
+                    # Show loading indicator
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        message_placeholder.markdown("Thinking...")
+                    
+                    # Call backend API to get response
+                    try:
+                        from api_utils import make_api_request, get_auth_headers
+                        
+                        # Prepare chat history for API
+                        chat_history = [
+                            {"role": msg["role"], "content": msg["content"]} 
+                            for msg in st.session_state.messages[:-1]  # Exclude current user message
+                        ]
+                        
+                        # Prepare request data
+                        data = {
+                            "message": prompt,
+                            "chat_history": chat_history
+                        }
+                        
+                        # Make API request with increased timeout
+                        headers = get_auth_headers()
+                        success, response_data, error = make_api_request(
+                            "/api/chat/message", 
+                            method="POST", 
+                            data=data, 
+                            headers=headers,
+                            timeout=60
+                        )
+                        
+                        if success:
+                            assistant_response = response_data.get("response", "No response from assistant")
+                        else:
+                            assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
+                    except Exception as e:
+                        assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
+                    
+                    # Update assistant message
+                    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                    
+                    # Update the display
+                    message_placeholder.markdown(assistant_response)
+                    
+                    # Rerun to refresh the display with updated messages
+                    st.rerun()
 
         # Custom styling for chat input and PDF upload button
         st.markdown("""
         <style>
         /* Ensure chat input and PDF button are aligned horizontally */
-        div[data-testid="column"]:last-child .stPopover > button {
+        div[data-testid="column"]:first-child .stPopover > button {
             background: rgba(255, 255, 255, 0.1) !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
             border-radius: 8px !important;
@@ -487,14 +487,14 @@ def chat_page():
             transition: all 0.2s ease !important;
         }
         
-        div[data-testid="column"]:last-child .stPopover > button:hover {
+        div[data-testid="column"]:first-child .stPopover > button:hover {
             background: rgba(255, 255, 255, 0.2) !important;
             transform: translateY(-2px) !important;
         }
         
         /* Position the PDF upload button close to the chat input */
-        div[data-testid="column"]:last-child {
-            padding-left: 8px !important;
+        div[data-testid="column"]:first-child {
+            padding-right: 8px !important;
         }
         
         /* Style the popover content */
