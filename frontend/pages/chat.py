@@ -49,7 +49,7 @@ def render_user_profile_control():
                 """, unsafe_allow_html=True)
                 
                 # Settings button
-                if st.button("⚙️ Settings", use_container_width=True, key="settings_btn"):
+                if st.button("⚙ Settings", use_container_width=True, key="settings_btn"):
                     st.info("Settings functionality coming soon!")
                 
                 # Logout button
@@ -528,5 +528,5 @@ def chat_page():
     # Render footer
     render_footer()
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     chat_page()
