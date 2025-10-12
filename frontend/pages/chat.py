@@ -11,6 +11,35 @@ sys.path.insert(0, frontend_dir)
 # Import layout functions
 from layout import render_footer
 from api_utils import clear_auth_session
+<<<<<<< HEAD
+from layout import render_header, render_footer, render_modern_header_with_user
+
+def chat_ui():
+    """Chat interface for authenticated users"""
+    # Render modern header with integrated user info and logout
+    render_modern_header_with_user()
+
+    st.write("Welcome to **MediConnect**! How can we assist you today?")
+
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+
+    for msg in st.session_state["messages"]:
+        if msg["role"] == "user":
+            st.markdown(f"<div class='user-msg'>🧑 {msg['content']}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='bot-msg'>🤖 {msg['content']}</div>", unsafe_allow_html=True)
+
+    with st.form(key="chat_form", clear_on_submit=True):
+        query = st.text_input("💡 Type your question here:", placeholder="Type your message here...")
+        submit_button = st.form_submit_button("Send")
+
+    if submit_button and query:
+        st.session_state["messages"].append({"role": "user", "content": query})
+        st.session_state["messages"].append({"role": "bot", "content": "🤖 Bot response placeholder"})
+        st.rerun()
+
+=======
 
 def render_user_profile_control():
     """Render responsive user profile control with dropdown"""
@@ -353,15 +382,59 @@ def chat_page():
             # Add user message to chat history FIRST
             st.session_state.messages.append({"role": "user", "content": prompt})
             
-            # Generate assistant response (placeholder)
-            response = f"Thank you for your message: '{prompt}'. This is a placeholder response. In a real implementation, this would connect to your AI backend."
+            # Show loading indicator
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                message_placeholder.markdown("Thinking...")
             
-            # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            # Call backend API to get response
+            try:
+                # Import API utilities
+                from api_utils import make_api_request, get_auth_headers
+                
+                # Prepare chat history for API
+                chat_history = [
+                    {"role": msg["role"], "content": msg["content"]} 
+                    for msg in st.session_state.messages[:-1]  # Exclude current user message
+                ]
+                
+                # Prepare request data
+                data = {
+                    "message": prompt,
+                    "chat_history": chat_history
+                }
+                
+                # Make API request with increased timeout
+                headers = get_auth_headers()
+                success, response_data, error = make_api_request(
+                    "/api/chat/message", 
+                    method="POST", 
+                    data=data, 
+                    headers=headers,
+                    timeout=60  # Increased timeout for AI processing
+                )
+                
+                if success:
+                    # Extract response from backend
+                    assistant_response = response_data.get("response", "No response from assistant")
+                    # The response now includes everything naturally combined
+                else:
+                    # Handle error case
+                    assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
+            except Exception as e:
+                # Handle unexpected errors
+                assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
+            
+            # Update assistant message
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            
+            # Update the display
+            message_placeholder.markdown(assistant_response)
             
             # Rerun to refresh the display with updated messages
             st.rerun()
     
+>>>>>>> 57d08da91ea4b3a7509105c42a7fee903696f9c3
     # Render footer
     render_footer()
 
