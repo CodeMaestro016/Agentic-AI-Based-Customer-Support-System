@@ -326,10 +326,12 @@ class MedicalWorkflow:
             "risk_level": "low"
         }
         
-        solution = self.solution_agent.generate_solution(
+        solution = self.solution_agent.generate_unified_response(
             classification=classification,
             patient_query=f"Please provide guidance based on this document summary: {doc_summary}",
-            chat_history=self.chat_history
+            chat_history=self.chat_history,
+            rag_context=doc_summary,
+            conversation_stage=self._determine_conversation_stage()
         )
         print(f"Solution: {solution}")
         

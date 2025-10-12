@@ -1,8 +1,13 @@
-# Modern chat page with user profile control and MediConnect theme
-
 import streamlit as st
 import sys
 import os
+import io
+import uuid
+
+try:
+    import pdfplumber  # Prefer pdfplumber for robust text extraction
+except Exception:  # Fallback if not available; Streamlit will surface error on use
+    pdfplumber = None
 
 # Add frontend directory to path
 frontend_dir = os.path.join(os.path.dirname(__file__), '..')
@@ -10,7 +15,7 @@ sys.path.insert(0, frontend_dir)
 
 # Import layout functions
 from layout import render_footer
-from api_utils import clear_auth_session
+from api_utils import clear_auth_session, make_api_request, get_auth_headers
 
 def render_user_profile_control():
     """Render responsive user profile control with dropdown"""
@@ -141,8 +146,6 @@ def render_user_profile_control():
     }}
     </style>
     """, unsafe_allow_html=True)
-
-
 
 def chat_page():
     """Main chat page function"""
@@ -348,62 +351,179 @@ def chat_page():
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
         
-        # Chat input
-        if prompt := st.chat_input("Type your message here..."):
-            # Add user message to chat history FIRST
-            st.session_state.messages.append({"role": "user", "content": prompt})
+        # Chat input container with integrated PDF upload button
+        chat_input_container = st.container()
+        with chat_input_container:
+            # Create a layout for PDF upload button and chat input
+            button_col, input_col = st.columns([1, 10])
             
-            # Show loading indicator
-            with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                message_placeholder.markdown("Thinking...")
+            with button_col:
+                # PDF upload popover
+                with st.popover("📎", use_container_width=True):
+                    st.markdown("**Upload PDF**")
+                    uploaded_file_inline = st.file_uploader("Select a PDF", type=["pdf"], accept_multiple_files=False, key="pdf_uploader_inline")
+                    if uploaded_file_inline is not None:
+                        if pdfplumber is None:
+                            st.error("pdfplumber not installed. Please install it to process PDFs.")
+                        else:
+                            if st.button("Summarize", key="summarize_pdf_inline"):
+                                try:
+                                    with st.spinner("Summarizing PDF..."):
+                                        # Extract text
+                                        file_bytes = uploaded_file_inline.read()
+                                        extracted_text_parts_inline = []
+                                        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                                            for page in pdf.pages:
+                                                page_text = page.extract_text() or ""
+                                                if page_text.strip():
+                                                    extracted_text_parts_inline.append(page_text)
+                                        extracted_text_inline = "\n\n".join(extracted_text_parts_inline).strip()
+
+                                        if not extracted_text_inline:
+                                            st.warning("No extractable text found in the PDF.")
+                                        else:
+                                            from api_utils import make_api_request, get_auth_headers
+                                            chat_history_inline = [
+                                                {"role": msg["role"], "content": msg["content"]}
+                                                for msg in st.session_state.get("messages", [])
+                                            ]
+                                            data_inline = {
+                                                "document_content": extracted_text_inline,
+                                                "document_type": "text",
+                                                "chat_history": chat_history_inline
+                                            }
+                                            headers_inline = get_auth_headers()
+                                            success_inline, response_data_inline, error_inline = make_api_request(
+                                                "/api/chat/document",
+                                                method="POST",
+                                                data=data_inline,
+                                                headers=headers_inline,
+                                                timeout=120
+                                            )
+                                            if success_inline and response_data_inline:
+                                                document_summary_inline = response_data_inline.get("rag_context") or "No summary returned."
+                                                assistant_response_inline = response_data_inline.get("response", "")
+
+                                                if "messages" not in st.session_state:
+                                                    st.session_state.messages = []
+                                                st.session_state.messages.append({"role": "assistant", "content": f"Here is the summary of your PDF:\n\n{document_summary_inline}"})
+                                                if assistant_response_inline:
+                                                    st.session_state.messages.append({"role": "assistant", "content": assistant_response_inline})
+
+                                                st.success("PDF summarized successfully.")
+                                                st.rerun()
+                                            else:
+                                                st.error(f"Failed to summarize PDF: {error_inline}")
+                                except Exception as e:
+                                    st.error(f"Error processing PDF: {str(e)}")
             
-            # Call backend API to get response
-            try:
-                # Import API utilities
-                from api_utils import make_api_request, get_auth_headers
-                
-                # Prepare chat history for API
-                chat_history = [
-                    {"role": msg["role"], "content": msg["content"]} 
-                    for msg in st.session_state.messages[:-1]  # Exclude current user message
-                ]
-                
-                # Prepare request data
-                data = {
-                    "message": prompt,
-                    "chat_history": chat_history
-                }
-                
-                # Make API request with increased timeout
-                headers = get_auth_headers()
-                success, response_data, error = make_api_request(
-                    "/api/chat/message", 
-                    method="POST", 
-                    data=data, 
-                    headers=headers,
-                    timeout=60  # Increased timeout for AI processing
-                )
-                
-                if success:
-                    # Extract response from backend
-                    assistant_response = response_data.get("response", "No response from assistant")
-                    # The response now includes everything naturally combined
-                else:
-                    # Handle error case
-                    assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
-            except Exception as e:
-                # Handle unexpected errors
-                assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
-            
-            # Update assistant message
-            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-            
-            # Update the display
-            message_placeholder.markdown(assistant_response)
-            
-            # Rerun to refresh the display with updated messages
-            st.rerun()
+            with input_col:
+                # Chat input
+                if prompt := st.chat_input("Type your message here..."):
+                    # Add user message to chat history
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    
+                    # Show loading indicator
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        message_placeholder.markdown("Thinking...")
+                    
+                    # Call backend API to get response
+                    try:
+                        from api_utils import make_api_request, get_auth_headers
+                        
+                        # Prepare chat history for API
+                        chat_history = [
+                            {"role": msg["role"], "content": msg["content"]} 
+                            for msg in st.session_state.messages[:-1]  # Exclude current user message
+                        ]
+                        
+                        # Prepare request data
+                        data = {
+                            "message": prompt,
+                            "chat_history": chat_history
+                        }
+                        
+                        # Make API request with increased timeout
+                        headers = get_auth_headers()
+                        success, response_data, error = make_api_request(
+                            "/api/chat/message", 
+                            method="POST", 
+                            data=data, 
+                            headers=headers,
+                            timeout=60
+                        )
+                        
+                        if success:
+                            assistant_response = response_data.get("response", "No response from assistant")
+                        else:
+                            assistant_response = f"Sorry, I encountered an error: {error}. Please try again."
+                    except Exception as e:
+                        assistant_response = f"Sorry, I encountered an unexpected error: {str(e)}. Please try again."
+                    
+                    # Update assistant message
+                    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                    
+                    # Update the display
+                    message_placeholder.markdown(assistant_response)
+                    
+                    # Rerun to refresh the display with updated messages
+                    st.rerun()
+
+        # Custom styling for chat input and PDF upload button
+        st.markdown("""
+        <style>
+        /* Ensure chat input and PDF button are aligned horizontally */
+        div[data-testid="column"]:first-child .stPopover > button {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+            height: 48px !important; /* Match chat input height */
+            width: 48px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease !important;
+        }
+        
+        div[data-testid="column"]:first-child .stPopover > button:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        /* Position the PDF upload button close to the chat input */
+        div[data-testid="column"]:first-child {
+            padding-right: 8px !important;
+        }
+        
+        /* Style the popover content */
+        .stPopover > div[data-testid="stPopover"] {
+            background: rgba(30, 30, 50, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+            margin-top: 10px !important;
+            min-width: 250px !important;
+        }
+        
+        /* Adjust chat input styling to align with button */
+        .stChatInput {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 15px !important;
+            height: 48px !important;
+        }
+        
+        .stChatInput input {
+            background: transparent !important;
+            color: white !important;
+            border: none !important;
+            height: 46px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
     
     # Render footer
     render_footer()
