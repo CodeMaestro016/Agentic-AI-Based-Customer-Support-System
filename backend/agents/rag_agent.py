@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from crewai import Agent
 from langchain.chat_models import ChatOpenAI
@@ -12,16 +13,17 @@ load_dotenv()
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 # 2. Paths and retrieval settings
-PERSIST_DIR = "chroma_mediconnect"
-K = 10
+# Persist under backend/chroma_mediconnect regardless of CWD
+PERSIST_DIR = str(Path(__file__).resolve().parents[1] / "chroma_mediconnect")
+K = 15
 
 # 3. Load embeddings and vectorstore
 print("Loading embeddings & vectorstore...")
 embeddings = OpenAIEmbeddings()
 vectordb = Chroma(persist_directory=PERSIST_DIR, embedding_function=embeddings)
 retriever = vectordb.as_retriever(
-    search_type="mmr",
-    search_kwargs={"k": K, "fetch_k": 50, "lambda_mult": 0.5}
+    search_type="similarity",
+    search_kwargs={"k": K}
 )
 
 # 4. Initialize model
@@ -81,12 +83,11 @@ def get_qa_chain(user_query: str):
 
     return RetrievalQA.from_chain_type(
         llm=llm,
-        chain_type="map_reduce",
+        chain_type="stuff",
         retriever=retriever,
         return_source_documents=True,
         chain_type_kwargs={
-            "question_prompt": prompt,
-            "combine_prompt": COMBINE_PROMPT
+            "prompt": prompt
         },
     )
 
@@ -107,7 +108,7 @@ def answer_query(user_query: str):
     qa_chain = get_qa_chain(user_query)
     result = qa_chain({"query": user_query})
 
-    answer = result["result"]
+    answer = result.get("result", "").strip()
     source_docs = result.get("source_documents", [])
     sources = []
 
@@ -118,6 +119,14 @@ def answer_query(user_query: str):
         if len(snippet) > 300:
             snippet = snippet[:300] + "..."
         sources.append({"source": src, "snippet": snippet})
+
+    # Strict policy: if no retrieved sources, do not return a model-generated answer
+    if not sources:
+        return {"answer": "No relevant information found.", "sources": []}
+
+    # If sources exist but the model produced an empty answer, still indicate no info
+    if not answer:
+        answer = "No relevant information found."
 
     return {"answer": answer, "sources": sources}
 
