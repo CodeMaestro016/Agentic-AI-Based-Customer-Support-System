@@ -15,11 +15,7 @@ sys.path.insert(0, frontend_dir)
 
 # Import layout functions
 from layout import render_footer
-<<<<<<< HEAD
-from api_utils import clear_auth_session
-=======
 from api_utils import clear_auth_session, make_api_request, get_auth_headers
->>>>>>> origin/development
 
 def render_user_profile_control():
     """Render responsive user profile control with dropdown"""
