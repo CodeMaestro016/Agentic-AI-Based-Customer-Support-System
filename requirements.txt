@@ -24,3 +24,4 @@ cryptography
 PyPDF2
 motor
 email-validator
+python-multipart
