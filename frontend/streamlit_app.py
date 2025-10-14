@@ -16,6 +16,8 @@ from pages.login_page import login_page
 from pages.chat import chat_page
 from pages.home import home_page
 from pages.sample_page import sample_page
+from pages.admin_login import admin_login_page
+from pages.admin_dashboard import admin_dashboard
 
 # Initialize session state
 if 'page' not in st.session_state:
@@ -75,6 +77,17 @@ def main():
             # Redirect to login if not authenticated
             st.error("Please login to access this page")
             st.session_state.page = 'login'
+            st.rerun()
+    elif st.session_state.page == 'admin_login':
+        admin_login_page()
+    elif st.session_state.page == 'admin_dashboard':
+        # Check if admin is authenticated
+        if st.session_state.admin_token and st.session_state.admin_user:
+            admin_dashboard()
+        else:
+            # Redirect to admin login if not authenticated
+            st.error("Admin authentication required")
+            st.session_state.page = 'admin_login'
             st.rerun()
     else:
         # Default to home page
