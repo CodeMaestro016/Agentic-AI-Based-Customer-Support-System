@@ -7,6 +7,8 @@ def render_modern_navbar():
         nav_value = st.query_params['navigate']
         if nav_value == 'login':
             st.session_state.page = 'login'
+        elif nav_value == 'admin_login':
+            st.session_state.page = 'admin_login'
         elif nav_value == 'home':
             st.session_state.page = 'home'
         elif nav_value in ['about', 'features', 'implementation', 'contact']:
@@ -93,6 +95,10 @@ def render_modern_navbar():
             <form method="GET" style="display: inline; margin: 0;">
                 <input type="hidden" name="navigate" value="login">
                 <button type="submit" class="nav-sign-in" style="background: none; border: none; cursor: pointer; padding: 0;">Sign In</button>
+            </form>
+            <form method="GET" style="display: inline; margin: 0;">
+                <input type="hidden" name="navigate" value="admin_login">
+                <button type="submit" class="nav-link" style="background: rgba(255, 193, 7, 0.1); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;">⚡ Admin</button>
             </form>
         </div>
     </div>
