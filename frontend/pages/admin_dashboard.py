@@ -1,5 +1,3 @@
-# Admin dashboard for PDF ingestion management
-
 import streamlit as st
 import sys
 import os
@@ -9,7 +7,7 @@ import io
 frontend_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.insert(0, frontend_dir)
 
-from api_utils import make_api_request, get_auth_headers, post_multipart
+from api_utils import make_api_request, get_auth_headers, post_multipart, clear_admin_session
 from layout import render_footer
 
 def render_admin_navbar():
@@ -61,18 +59,6 @@ def render_admin_navbar():
                 <span style="color: #ffc107; font-size: 0.9rem;">
                     👤 {admin_email}
                 </span>
-                <button onclick="window.location.href='?logout=true'" style="
-                    background: rgba(220, 53, 69, 0.1);
-                    color: #dc3545;
-                    border: 1px solid rgba(220, 53, 69, 0.3);
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    font-weight: 500;
-                " onmouseover="this.style.background='rgba(220, 53, 69, 0.2)'" onmouseout="this.style.background='rgba(220, 53, 69, 0.1)'">
-                    🚪 Logout
-                </button>
             </div>
         </div>
     </nav>
@@ -197,6 +183,22 @@ def admin_dashboard():
         box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4) !important;
     }
     
+    /* Enhanced logout button */
+    .stButton#admin_logout_btn > button {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+        color: #ffffff !important;
+        padding: 10px 20px !important;
+        font-size: 0.9rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3) !important;
+        
+    }
+    
+    .stButton#admin_logout_btn > button:hover {
+        background: linear-gradient(135deg, #c82333 0%, #b21f2d 100%) !important;
+        box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4) !important;
+    }
+    
     /* Admin file uploader */
     .stFileUploader {
         border: 2px dashed rgba(255, 193, 7, 0.3) !important;
@@ -285,16 +287,34 @@ def admin_dashboard():
         st.session_state.page = 'admin_login'
         st.rerun()
     
-    # Handle logout
+    # Handle logout (legacy via query param)
     if st.query_params.get('logout', False):
-        st.session_state.admin_user = None
-        st.session_state.admin_token = None
+        clear_admin_session()
         st.session_state.page = 'admin_login'
         st.success("✅ Logged out successfully!")
         st.rerun()
     
     # Render admin navigation
     render_admin_navbar()
+    
+    # Spacer to create space between navbar and logout button
+    st.markdown("""
+    <div style="
+        height: 25px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+    "></div>
+    """, unsafe_allow_html=True)
+
+    # Streamlit logout button (enhanced for user-friendliness)
+    top_bar = st.container()
+    with top_bar:
+        col1, col2 = st.columns([8, 2])
+        with col2:
+            if st.button("🚪 Sign Out", key="admin_logout_btn"):
+                clear_admin_session()
+                st.session_state.page = 'admin_login'
+                st.success("✅ Signed out successfully!")
+                st.rerun()
     
     # Main dashboard container
     st.markdown('<div class="admin-dashboard-container">', unsafe_allow_html=True)
@@ -364,27 +384,6 @@ def admin_dashboard():
                 <small>No PDFs uploaded yet</small>
             </div>
             """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">🔄</div>
-            <div class="metric-label">Actions</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔄 Re-ingest", key="reingest_btn"):
-            with st.spinner("🔄 Re-ingesting existing PDFs..."):
-                reingest_success, reingest_data, reingest_error = make_api_request(
-                    "/admin/reingest",
-                    method="POST",
-                    headers={"Authorization": f"Bearer {st.session_state.admin_token}"}
-                )
-            
-            if reingest_success:
-                st.success(f"✅ {reingest_data.get('message', 'Re-ingestion completed')}")
-                st.rerun()
-            else:
-                st.error(f"❌ Re-ingestion failed: {reingest_error}")
     
     # PDF Upload Section
     st.markdown("""
