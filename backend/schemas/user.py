@@ -18,8 +18,21 @@ class UserPublic(BaseModel):
     id: str
     email: EmailStr
     created_at: datetime
+    is_admin: bool = False
 
 class Token(BaseModel):
     """JWT token response"""
     access_token: str
     token_type: str = "bearer"
+
+class AdminLogin(BaseModel):
+    """Admin login request"""
+    email: EmailStr
+    password: str
+
+class AdminPublic(BaseModel):
+    """Admin data for API responses"""
+    id: str
+    email: EmailStr
+    created_at: datetime
+    is_admin: bool = True

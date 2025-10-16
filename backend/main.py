@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routes import auth
 from backend.routes import chat
+from backend.routes import admin
 from backend.database.mongodb import connect_to_mongo, close_mongo_connection
 import logging
 
@@ -35,6 +36,7 @@ app.add_middleware(
 # Add routes
 app.include_router(auth.router)
 app.include_router(chat.router)
+app.include_router(admin.router)
 
 # Health check endpoint
 @app.get("/health")
