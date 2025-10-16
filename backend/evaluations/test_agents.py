@@ -28,11 +28,35 @@ TEST_CASES = [
     #"I need a mental health specialist",
 
      # === APPOINTMENT REQUESTS ===
-    "I want to book an appointment with a doctor",
-    "Can I get a same-day appointment?",
-    "I need to reschedule my appointment",
-    "What times are available for a cardiology consultation?",
-    "How can I book an appointment online?",
+    #"I want to book an appointment with a doctor",
+    #"Can I get a same-day appointment?",
+    #"I need to reschedule my appointment",
+    #"What times are available for a cardiology consultation?",
+    #"How can I book an appointment online?",
+
+    # === MEDICAL CENTER INFORMATION ===
+    "What are your opening hours?",
+    "Where is your clinic located?",
+    "Do you have parking facilities?",
+    "What services do you offer?",
+    "How can I contact your billing department?",
+    "Do you have multilingual staff?",
+    
+    # === DOCUMENT REQUESTS (PDF SUMMARIZATION) ===
+    "doc:Please analyze this medical report",
+    "doc:Can you summarize my blood test results?",
+    "doc:I have a prescription that needs explanation",
+    "doc:Please review this discharge summary",
+    "doc:Can you explain this MRI report?",
+    "doc:What does this pathology report mean?",
+    
+    # === GENERAL HEALTH QUESTIONS ===
+    "What are the benefits of regular exercise?",
+    "How can I improve my sleep quality?",
+    "What's a healthy diet for weight loss?",
+    "How can I manage stress effectively?",
+    "What are the signs of diabetes?",
+    "How often should I get a health checkup?",
 
     
 ]
