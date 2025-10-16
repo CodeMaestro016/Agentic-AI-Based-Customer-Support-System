@@ -20,12 +20,19 @@ TEST_CASES = [
     #"I have a persistent sore throat and difficulty swallowing",
     
     # === DOCTOR/SPECIALIST INQUIRIES ===
-    "Can I see a cardiologist?",
-    "Do you have psychologists available?",
-    "I need to see a neurologist for my migraines",
-    "Who are the available dermatologists?",
-    "Is there a pediatrician available for my child?",
-    "I need a mental health specialist",
+    #"Can I see a cardiologist?",
+    #"Do you have psychologists available?",
+    #"I need to see a neurologist for my migraines",
+    #"Who are the available dermatologists?",
+    #"Is there a pediatrician available for my child?",
+    #"I need a mental health specialist",
+
+     # === APPOINTMENT REQUESTS ===
+    "I want to book an appointment with a doctor",
+    "Can I get a same-day appointment?",
+    "I need to reschedule my appointment",
+    "What times are available for a cardiology consultation?",
+    "How can I book an appointment online?",
 
     
 ]
