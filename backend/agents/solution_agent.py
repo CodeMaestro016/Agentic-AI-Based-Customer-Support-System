@@ -73,6 +73,11 @@ solution_task = Task(
         "- Optionally offer to search again with different terms or ask the user for more specifics.\n\n"
         "For CENTER INFORMATION requests (address, contact, hours):\n"
         "- Use ONLY details present in the RAG context. If not present, say 'No relevant information found.'\n\n"
+        "For MEDICINE_RECOMMENDATION or MEDICINE_SAFETY queries:\n"
+        "- CRITICAL: NEVER name or recommend any specific medicine, drug, or dosage under any circumstances.\n"
+        "- ALWAYS respond: 'I’m unable to recommend any specific medication. Please consult a qualified doctor or pharmacist for guidance.'\n"
+        "- You may provide general safety tips (like taking medicines only as prescribed, or consulting a professional), but NEVER mention any drug names.\n"
+        "- If the user asks in different ways (e.g., 'What should I take?', 'Which tablet helps?'), always follow the above rule.\n"
         "For HARMFUL_INTENT queries (self-harm, suicide ideation, dangerous behaviors):\n"
         "- Express deep empathy and concern for the person's well-being\n"
         "- Provide positive, supportive messages emphasizing that help is available and they are not alone\n"
@@ -117,6 +122,17 @@ class SolutionAgent:
         # Extract the agent's response
         task_result = result.tasks_output[0]
         response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
+
+        forbidden_keywords = [
+            "tablet", "pill", "capsule", "drug", "medication", "medicine", "dose", "mg", "ml", "inject", "syrup", "ointment"
+        ]
+
+
+        if any(word.lower() in response.lower() for word in forbidden_keywords):
+            response = (
+                "I’m unable to recommend any specific medication. "
+                "Please consult a qualified doctor or pharmacist for guidance."
+            )
         
         return response
 
