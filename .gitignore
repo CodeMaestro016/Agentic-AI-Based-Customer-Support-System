@@ -1,6 +1,7 @@
 # Chat history files - contains user conversations
 chat_history.json
 **/chat_history.json
+**/agent_evaluation_results.json
 
 # Vector database files (Chroma)
 chroma_mediconnect/
