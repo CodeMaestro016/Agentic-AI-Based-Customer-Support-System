@@ -114,17 +114,6 @@ class SolutionAgent:
         task_result = result.tasks_output[0]
         response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
 
-        forbidden_keywords = [
-            "tablet", "pill", "capsule", "drug", "medication", "medicine", "dose", "mg", "ml", "inject", "syrup", "ointment"
-        ]
-
-
-        if any(word.lower() in response.lower() for word in forbidden_keywords):
-            response = (
-                "I’m unable to recommend any specific medication. "
-                "Please consult a qualified doctor or pharmacist for guidance."
-            )
-        
         return response
 
 if __name__ == "__main__":
