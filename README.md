@@ -140,3 +140,17 @@ If you encounter any issues:
    - Steps to reproduce
    - Error messages
    - System information
+
+## Frontend  
+### Home Page
+![Image](https://github.com/user-attachments/assets/afba1bef-7ad8-45a0-b083-72fb4ec3bfbe)
+
+### Login page
+![Image](https://github.com/user-attachments/assets/0ca80962-0fa0-4bc1-8925-e0eb821111f4)
+
+### Chat Page
+![Image](https://github.com/user-attachments/assets/f00e6963-81af-41ec-a02c-6c5099f1ac2d)
+
+### Admin Dashboard
+![Image](https://github.com/user-attachments/assets/67bb13c4-8a1d-42b6-9382-cef1392738d3)
+
