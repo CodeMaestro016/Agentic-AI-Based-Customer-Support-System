@@ -44,44 +44,24 @@ class MedicalWorkflow:
         if classification.get("required_resources", {}).get("rag_needed", False):
             print("\nStep 2a: Retrieving knowledge base information...")
             try:
-                # Only enhance RAG query if user explicitly asks for specific information
+                # Use raw user input as the RAG query to avoid diluting retrieval
                 rag_query = user_input
-                explicitly_asking_for_info = any(word in user_input.lower() for word in [
-                    'address', 'location', 'contact', 'phone', 'number', 'where',
-                    'doctor', 'specialist', 'appointment', 'schedule', 'book', 'available'
-                ])
-                
-                if explicitly_asking_for_info:
-                    if any(word in user_input.lower() for word in ['address', 'location', 'contact', 'phone', 'number', 'where']):
-                        rag_query = f"MediConnect medical center address location contact phone number {user_input}"
-                    elif any(word in user_input.lower() for word in ['doctor', 'specialist', 'appointment', 'schedule', 'book', 'available']):
-                        rag_query = f"doctors available specialists appointments {user_input}"
-                
+                print(f"RAG Query: {rag_query}")
                 rag_result = answer_query(rag_query)
-                rag_context = rag_result["answer"]
-                print(f"RAG Context: {rag_context}")
-                
-                # Check if RAG found relevant info and user explicitly asked for it
-                if not rag_context or rag_context.lower().strip() in [
-                    "i don't know", "i'm not sure", "no information available",
-                    "i cannot find", "i don't have information"
-                ] or "don't know" in rag_context.lower():
-                    # Only provide fallback information if user explicitly asked for it
-                    if explicitly_asking_for_info:
-                        if any(word in user_input.lower() for word in ['address', 'location', 'contact', 'phone', 'where']):
-                            rag_context = "MediConnect Medical Center is located at 123 Medical Plaza, Colombo 07. Contact: +94 11 234 5678. Reception hours: 8 AM - 8 PM daily."
-                        elif any(word in user_input.lower() for word in ['doctor', 'specialist', 'appointment', 'schedule', 'book', 'available']):
-                            rag_context = "Available doctors today: Dr. Silva (Cardiologist) at 2 PM and 4 PM, Dr. Perera (General Physician) at 10 AM and 3 PM, Dr. Fernando (Internal Medicine) at 1 PM and 5 PM. Walk-ins accepted until 6 PM."
-                        print("Knowledge base: Using fallback MediConnect information")
-                    else:
-                        rag_context = "No specific information found in knowledge base"
-                        print("Knowledge base: No fallback needed for symptom query")
+                # answer_query returns a dict: {"answer": str, "sources": list}
+                rag_answer = (rag_result or {}).get("answer", "").strip()
+                rag_sources = (rag_result or {}).get("sources", [])
+                # Strict RAG: only use when we actually have retrieved sources
+                if rag_sources and rag_answer:
+                    rag_context = rag_answer
+                    print("Knowledge base: Found relevant information - using RAG context")
                 else:
-                    print("Knowledge base: Found relevant information")
+                    rag_context = "No relevant information found."
+                    print("Knowledge base: No sources retrieved - no relevant information found")
                     
             except Exception as e:
                 print(f"Knowledge base error: {e}")
-                rag_context = "Knowledge base system unavailable"
+                rag_context = "No relevant information found."
         
         # Generate single conversational response
         print("\nStep 4: Generating Unified Response...")
@@ -144,10 +124,12 @@ class MedicalWorkflow:
             "risk_level": "low"
         }
         
-        solution = self.solution_agent.generate_solution(
+        solution = self.solution_agent.generate_unified_response(
             classification=classification,
             patient_query=f"Please provide guidance based on this document summary: {doc_summary}",
-            chat_history=self.chat_history
+            chat_history=self.chat_history,
+            rag_context=doc_summary,
+            conversation_stage=self._determine_conversation_stage()
         )
         print(f"Solution: {solution}")
         

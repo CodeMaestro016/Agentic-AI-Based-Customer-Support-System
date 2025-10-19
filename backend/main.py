@@ -9,6 +9,8 @@ sys.path.insert(0, str(project_root))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routes import auth
+from backend.routes import chat
+from backend.routes import admin
 from backend.database.mongodb import connect_to_mongo, close_mongo_connection
 import logging
 
@@ -31,8 +33,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add auth routes
+# Add routes
 app.include_router(auth.router)
+app.include_router(chat.router)
+app.include_router(admin.router)
 
 # Health check endpoint
 @app.get("/health")
@@ -42,7 +46,18 @@ async def health_check():
         "status": "healthy",
         "message": "Customer Support System Backend is running",
         "version": "1.0.0",
-        "database": "MongoDB connection will be tested during startup"
+        "services": {
+            "database": "MongoDB connection tested during startup",
+            "authentication": "Available at /api/auth",
+            "chat_workflow": "Available at /api/chat",
+            "agents": "medical_workflow, query_classifier, rag_agent, solution_agent, followup_agent, doc_summarizer"
+        },
+        "endpoints": {
+            "docs": "/docs",
+            "health": "/health",
+            "auth": "/api/auth",
+            "chat": "/api/chat"
+        }
     }
 
 # API status endpoint
