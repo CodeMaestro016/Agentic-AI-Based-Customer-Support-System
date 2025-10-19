@@ -160,7 +160,6 @@ class QueryClassifierAgent:
             print("\n⚠️ It sounds like you're going through a really difficult time.")
             print("You are not alone — help is available right now. ❤️")
             print("Please reach out to someone who can help you immediately.")
-            print("📞 You can call the 1990 hotline for confidential support 24/7.\n")
             print("You matter, and there are people who care about you and want to help.\n")
 
         return classification
