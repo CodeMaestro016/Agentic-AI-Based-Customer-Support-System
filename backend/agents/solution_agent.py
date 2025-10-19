@@ -73,11 +73,7 @@ solution_task = Task(
         "- Optionally offer to search again with different terms or ask the user for more specifics.\n\n"
         "For CENTER INFORMATION requests (address, contact, hours):\n"
         "- Use ONLY details present in the RAG context. If not present, say 'No relevant information found.'\n\n"
-        "For HARMFUL_INTENT queries (self-harm, suicide ideation, dangerous behaviors):\n"
-        "- Express deep empathy and concern for the person's well-being\n"
-        "- Provide positive, supportive messages emphasizing that help is available and they are not alone\n"
-        "- Strongly suggest calling the 1990 hotline for immediate, confidential support\n"
-        "- Encourage seeking professional help while being compassionate and non-judgmental\n"
+        "CRITICAL: Never provide doctor/appointment or center information unless it is present in the RAG context."
     ),
     expected_output=(
         "Single natural conversational response as MediConnect receptionist."
@@ -117,6 +113,17 @@ class SolutionAgent:
         # Extract the agent's response
         task_result = result.tasks_output[0]
         response = getattr(task_result, "content", getattr(task_result, "raw", str(task_result)))
+
+        forbidden_keywords = [
+            "tablet", "pill", "capsule", "drug", "medication", "medicine", "dose", "mg", "ml", "inject", "syrup", "ointment"
+        ]
+
+
+        if any(word.lower() in response.lower() for word in forbidden_keywords):
+            response = (
+                "I’m unable to recommend any specific medication. "
+                "Please consult a qualified doctor or pharmacist for guidance."
+            )
         
         return response
 
