@@ -78,8 +78,6 @@ solution_task = Task(
         "- Provide positive, supportive messages emphasizing that help is available and they are not alone\n"
         "- Strongly suggest calling the 1990 hotline for immediate, confidential support\n"
         "- Encourage seeking professional help while being compassionate and non-judgmental\n"
-        "- Keep the response caring, brief, and focused on support resources\n\n"
-        "CRITICAL: Never provide doctor/appointment or center information unless it is present in the RAG context."
     ),
     expected_output=(
         "Single natural conversational response as MediConnect receptionist."
