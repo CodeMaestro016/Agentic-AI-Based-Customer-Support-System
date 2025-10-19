@@ -73,6 +73,11 @@ solution_task = Task(
         "- Optionally offer to search again with different terms or ask the user for more specifics.\n\n"
         "For CENTER INFORMATION requests (address, contact, hours):\n"
         "- Use ONLY details present in the RAG context. If not present, say 'No relevant information found.'\n\n"
+        "For MEDICINE_RECOMMENDATION or MEDICINE_SAFETY queries:\n"
+        "- NEVER name or recommend any specific medicine, drug, or dosage.\n"
+        "- Politely explain that only a qualified doctor or pharmacist can recommend or prescribe medicine.\n"
+        "- You may provide general safety tips (like taking medicines only as prescribed, or consulting a professional).\n"
+        "- Example: 'It’s best to check with a qualified doctor before taking any medication for your symptoms.'\n\n"
         "CRITICAL: Never provide doctor/appointment or center information unless it is present in the RAG context."
     ),
     expected_output=(
