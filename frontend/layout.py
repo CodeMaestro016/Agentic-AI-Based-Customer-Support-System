@@ -235,7 +235,7 @@ def render_modern_header_with_user():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def render_footer():
-    """Render modern footer with MediConnect branding"""
+    """Render modern footer with MediConnect branding and hotline"""
     st.markdown("""
     <style>
     .footer {
@@ -259,8 +259,27 @@ def render_footer():
         font-weight: 600;
         font-size: 1rem;
     }
+    .hotline-highlight {
+        background: linear-gradient(135deg, #ff6b9d, #c44aff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+        font-size: 1.1rem;
+        text-shadow: 0 2px 4px rgba(255, 107, 157, 0.3);
+        animation: hotline-pulse 2s ease-in-out infinite;
+    }
+    @keyframes hotline-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    .hotline-text {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.85rem;
+        margin-top: 5px;
+    }
     </style>
-    
+
     <div class="footer">
         <div class="footer-content">
             <div class="footer-text">
@@ -268,6 +287,12 @@ def render_footer():
             </div>
             <div class="footer-text">
                 Powered by AI-driven chatbot technology
+            </div>
+            <div class="footer-text">
+                <span class="hotline-highlight">📞 1990 Hotline</span>
+            </div>
+            <div class="hotline-text">
+                24/7 Confidential Support Available
             </div>
         </div>
     </div>
