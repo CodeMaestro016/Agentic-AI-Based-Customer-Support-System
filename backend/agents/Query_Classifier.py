@@ -11,7 +11,6 @@ os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Lower temperature for consistent classification
 
 
-
 class QueryClassifierAgent:
     """Classifies user queries and determines required resources"""
     def __init__(self):
@@ -140,11 +139,9 @@ class QueryClassifierAgent:
         # Parse JSON response
         try:
             classification = json.loads(response.strip())
-            return classification
         except json.JSONDecodeError:
-            # Fallback classification if JSON parsing fails
             print(f"Warning: Failed to parse classification JSON: {response}")
-            return {
+            classification = {
                 "intent": "symptom_inquiry",
                 "urgency": "medium",
                 "symptoms": [],
@@ -157,6 +154,17 @@ class QueryClassifierAgent:
                 "next_agent": "solution_agent",
                 "reasoning": "Fallback classification due to parsing error"
             }
+
+        # 🆕 Added: Supportive message for harmful intent
+        if classification.get("intent") == "harmful_intent":
+            print("\n⚠️ It sounds like you're going through a really difficult time.")
+            print("You are not alone — help is available right now. ❤️")
+            print("Please reach out to someone who can help you immediately.")
+            print("📞 You can call the 1990 hotline for confidential support 24/7.\n")
+            print("You matter, and there are people who care about you and want to help.\n")
+
+        return classification
+
 
 if __name__ == "__main__":
     # Test the Query Classifier
