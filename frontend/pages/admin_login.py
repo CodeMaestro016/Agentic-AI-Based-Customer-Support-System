@@ -336,6 +336,12 @@ def admin_login_page():
     # Render admin navigation bar
     render_admin_navbar()
     
+    # Support query-param navigation from navbar button (e.g., ?page=home)
+    if 'page' in st.query_params and st.query_params['page'] == 'home':
+        st.session_state.page = 'home'
+        del st.query_params['page']
+        st.rerun()
+    
     # Create main container
     st.markdown('<div class="admin-login-container">', unsafe_allow_html=True)
     

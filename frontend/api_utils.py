@@ -62,3 +62,7 @@ def clear_auth_session():
     """Clear authentication data from session"""
     st.session_state.token = None
     st.session_state.user = None
+
+def clear_admin_session():
+    st.session_state.admin_token = None
+    st.session_state.admin_user = None
