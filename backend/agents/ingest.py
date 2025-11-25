@@ -7,7 +7,7 @@
 # - Saves to persistent Chroma DB
 # - Skips re-indexing if no changes detected
 # - On updates: deletes previous embeddings for the same PDF source
-# ---------------------------------------------------------------
+# ---------------------------------------
 
 import os
 import json
